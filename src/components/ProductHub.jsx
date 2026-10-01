@@ -19,7 +19,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import ProductModal from './ProductModal';
-import { generateProductSlug, getFileFromImageUrl } from '../utils/productData';
+import { generateProductSlug, getFileFromImageUrl, downloadImageFile } from '../utils/productData';
 
 // Instagram Vector Icon
 function InstagramIcon({ className = "w-3.5 h-3.5" }) {
@@ -275,25 +275,78 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Facebook Share handler (copies clean details to clipboard and opens Facebook)
-  const handleFacebookShare = (product) => {
+  // Facebook Share handler: Uses Web Share API with image & text when available, falls back to copying description and opening Facebook
+  const handleFacebookShare = async (product) => {
     const data = getProductShareData(product);
-    navigator.clipboard.writeText(data.whatsAppText);
-    setNotificationMessage('Product details copied! Ready to paste into your Facebook post.');
+
+    // 1. Check if native Web Share API (navigator.share) supports sharing image & text directly
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        let imageFile = null;
+        if (product.imageUrl) {
+          imageFile = await getFileFromImageUrl(product.imageUrl, product.title);
+        }
+
+        // Package image file and description if supported
+        if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+          await navigator.share({
+            title: product.title,
+            text: data.facebookQuote,
+            files: [imageFile]
+          });
+          setNotificationMessage('Photo & product details shared successfully!');
+          return;
+        }
+
+        // Fall back to native sharing text only
+        const textShareData = { title: product.title, text: data.facebookQuote };
+        if (navigator.canShare ? navigator.canShare(textShareData) : true) {
+          await navigator.share(textShareData);
+          setNotificationMessage('Product details shared successfully!');
+          return;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.warn('Native share failed for Facebook, falling back to clipboard & web link:', err);
+      }
+    }
+
+    // 2. Fallback: Automatically copy full formatted product description to clipboard and open Facebook sharer
+    try {
+      await navigator.clipboard.writeText(data.facebookQuote);
+      setNotificationMessage('Product details copied to clipboard! Ready to paste into your Facebook post.');
+    } catch {
+      setNotificationMessage('Opening Facebook...');
+    }
+
     const url = `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(data.facebookQuote)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Instagram Share handler (copies formatted caption without URLs and alerts user)
-  const handleInstagramShare = (product) => {
+  // Instagram Share handler: Copies complete product description to clipboard and downloads the product image
+  const handleInstagramShare = async (product) => {
     const data = getProductShareData(product);
-    navigator.clipboard.writeText(data.instagramCaption);
+
+    // 1. Copy complete formatted description text to clipboard
+    try {
+      await navigator.clipboard.writeText(data.instagramCaption);
+    } catch (err) {
+      console.warn('Failed to copy Instagram caption:', err);
+    }
+
+    // 2. Download / save product image to device so user can pick it in Instagram
+    if (product.imageUrl) {
+      try {
+        await downloadImageFile(product.imageUrl, product.title);
+      } catch (err) {
+        console.warn('Image download failed:', err);
+      }
+    }
+
+    // 3. UI feedback with exact requested notification string
     setCopiedAction(`${product.id}-instagram`);
-    
-    // Exact requested notification string
-    setNotificationMessage('Product details copied! Paste them into your Instagram post or story.');
-    
-    setTimeout(() => setCopiedAction(null), 2500);
+    setNotificationMessage('Details & Image copied! Paste them into your Instagram post.');
+    setTimeout(() => setCopiedAction(null), 3500);
   };
 
   // Copy full details (without URLs)
@@ -660,7 +713,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
                       <button
                         type="button"
                         onClick={() => handleInstagramShare(product)}
-                        title="Copy Instagram post caption"
+                        title="Copy Details & Image for Instagram post"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-900 border border-pink-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-instagram` ? (
@@ -894,21 +947,38 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
               <p className="text-xs text-slate-500 truncate max-w-md">
                 {selectedPhoto.description || 'Listing photo'}
               </p>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    handleWhatsAppShare(selectedPhoto);
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  onClick={() => handleWhatsAppShare(selectedPhoto)}
+                  title="Share on WhatsApp"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                 >
                   <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Share on WhatsApp</span>
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFacebookShare(selectedPhoto)}
+                  title="Share on Facebook"
+                  className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Facebook</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInstagramShare(selectedPhoto)}
+                  title="Copy Details & Image for Instagram"
+                  className="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <InstagramIcon className="w-3.5 h-3.5 text-pink-600" />
+                  <span>Instagram</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedPhoto(null)}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                 >
                   Close
                 </button>

@@ -160,3 +160,54 @@ export async function getFileFromImageUrl(imageUrl, title = 'product') {
   return null;
 }
 
+/**
+ * Triggers a download of the product image file to the user's device,
+ * allowing it to be immediately selected for Instagram posts/stories.
+ */
+export async function downloadImageFile(imageUrl, title = 'product') {
+  if (!imageUrl || typeof window === 'undefined') return false;
+  const cleanName = (title || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+
+  try {
+    // 1. Data URL
+    if (imageUrl.startsWith('data:image/')) {
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      const mime = imageUrl.match(/data:image\/(.*?);/)?.[1] || 'jpeg';
+      const ext = mime.replace('jpeg', 'jpg');
+      a.download = `${cleanName}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return true;
+    }
+
+    // 2. Web URL
+    if (/^https?:\/\//i.test(imageUrl)) {
+      const response = await fetch(imageUrl, { mode: 'cors' });
+      if (!response.ok) throw new Error('Fetch failed');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      a.download = `${cleanName}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Direct image download failed, attempting window fallback:', err);
+    try {
+      const win = window.open(imageUrl, '_blank');
+      if (win) return true;
+    } catch {
+      // ignore
+    }
+  }
+  return false;
+}
+
+
