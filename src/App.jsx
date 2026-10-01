@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, 
   ShoppingBag, 
@@ -70,6 +70,18 @@ export default function App() {
       window.removeEventListener('popstate', handleUrlChange);
     };
   }, []);
+
+  const tabsContainerRef = useRef(null);
+
+  // Auto-scroll active tab into view on mobile
+  useEffect(() => {
+    if (tabsContainerRef.current) {
+      const activeBtn = tabsContainerRef.current.querySelector('[data-active="true"]');
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activeTab]);
 
   // 1. User Name
   const [userName, setUserName] = useState(() => {
@@ -228,62 +240,76 @@ export default function App() {
         />
 
         {/* Top-Level Navigation Bar */}
-        <nav className="flex items-center justify-between border-b border-amber-200/80 pb-3 flex-wrap gap-3">
-          <div className="flex items-center gap-2 p-1 rounded-2xl bg-white/95 border border-amber-200/80 shadow-xs">
-            {/* Tab 1: Productivity */}
-            <button
-              onClick={() => setActiveTab('productivity')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'productivity'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50'
-              }`}
-            >
-              <CheckSquare className="w-4 h-4" />
-              <span>Productivity Hub</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                activeTab === 'productivity' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'
-              }`}>
-                {todos.filter(t => t.completed).length}/{todos.length}
-              </span>
-            </button>
+        <nav className="w-full flex flex-col md:flex-row md:items-center md:justify-between border-b border-amber-200/80 pb-3.5 gap-3">
+          {/* Responsive Tabs Container: smooth horizontal scroll with padding on mobile, seamless on desktop */}
+          <div 
+            ref={tabsContainerRef}
+            className="w-full md:w-auto overflow-x-auto no-scrollbar scroll-smooth p-1.5 rounded-2xl bg-white/95 border border-amber-200/80 shadow-xs touch-pan-x"
+          >
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-max px-0.5">
+              {/* Tab 1: Productivity */}
+              <button
+                type="button"
+                data-active={activeTab === 'productivity'}
+                onClick={() => setActiveTab('productivity')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                  activeTab === 'productivity'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/80'
+                }`}
+              >
+                <CheckSquare className="w-4 h-4 shrink-0" />
+                <span>Productivity Hub</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  activeTab === 'productivity' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {todos.filter(t => t.completed).length}/{todos.length}
+                </span>
+              </button>
 
-            {/* Tab 2: Resale & Donation Hub */}
-            <button
-              onClick={() => setActiveTab('resale-hub')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'resale-hub'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Resale & Donation Hub</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                activeTab === 'resale-hub' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'
-              }`}>
-                {products.length}
-              </span>
-            </button>
+              {/* Tab 2: Resale & Donation Hub */}
+              <button
+                type="button"
+                data-active={activeTab === 'resale-hub'}
+                onClick={() => setActiveTab('resale-hub')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                  activeTab === 'resale-hub'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/80'
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4 shrink-0" />
+                <span>Resale & Donation Hub</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  activeTab === 'resale-hub' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {products.length}
+                </span>
+              </button>
 
-            {/* Tab 3: Local Lead Generator */}
-            <button
-              onClick={() => setActiveTab('lead-scraper')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'lead-scraper'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50'
-              }`}
-            >
-              <Target className="w-4 h-4 text-rose-600" />
-              <span>Find Clients & Leads</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-extrabold uppercase tracking-wider">
-                Auditor
-              </span>
-            </button>
+              {/* Tab 3: Local Lead Generator */}
+              <button
+                type="button"
+                data-active={activeTab === 'lead-scraper'}
+                onClick={() => setActiveTab('lead-scraper')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                  activeTab === 'lead-scraper'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/80'
+                }`}
+              >
+                <Target className={`w-4 h-4 shrink-0 ${activeTab === 'lead-scraper' ? 'text-slate-950' : 'text-rose-600'}`} />
+                <span>Find Clients & Leads</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
+                  activeTab === 'lead-scraper' ? 'bg-amber-600 text-white' : 'bg-rose-100 text-rose-700 border border-rose-200'
+                }`}>
+                  Auditor
+                </span>
+              </button>
+            </div>
           </div>
 
-          <div className="text-xs text-slate-500 font-medium hidden md:block">
+          <div className="text-xs text-slate-500 font-medium hidden md:block shrink-0">
             {activeTab === 'productivity' && 'Daily habits, focus timer, and task manager'}
             {activeTab === 'resale-hub' && 'Give away or resell items with 1-click social sharing'}
             {activeTab === 'lead-scraper' && 'Scrape and audit commercial leads with CSV export'}
