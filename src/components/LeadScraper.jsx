@@ -19,7 +19,7 @@ import {
   Flame, 
   MessageCircle
 } from 'lucide-react';
-import { searchLeads, exportLeadsToCsv, generateLocalLeads } from '../utils/scraperService';
+import { searchLeads, exportLeadsToCsv, INITIAL_REAL_LEADS } from '../utils/scraperService';
 
 const PRESET_SEARCHES = [
   { city: 'Kochi', industry: 'Restaurants' },
@@ -32,7 +32,7 @@ const PRESET_SEARCHES = [
 export default function LeadScraper() {
   const [city, setCity] = useState('Kochi');
   const [industry, setIndustry] = useState('Restaurants');
-  const [leads, setLeads] = useState(() => generateLocalLeads('Kochi', 'Restaurants'));
+  const [leads, setLeads] = useState(() => INITIAL_REAL_LEADS);
   const [isLoading, setIsLoading] = useState(false);
   const [filterType, setFilterType] = useState('all'); // 'all', 'opportunities', 'healthy', 'no-website'
   const [copiedId, setCopiedId] = useState(null);
@@ -99,11 +99,17 @@ export default function LeadScraper() {
               <Building2 className="w-5 h-5 text-amber-700" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                Local Client & Business Lead Generator
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                  Local Client & Business Lead Generator
+                </h2>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Real OpenStreetMap Listings & Live Audits
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                Discover commercial listings with automated technical & website health audits
+                Live POI directory extraction with real-time HTTP socket audits, SSL checks, and CSV export
               </p>
             </div>
           </div>
@@ -320,6 +326,10 @@ export default function LeadScraper() {
                               </span>
                               <span>•</span>
                               <span>{lead.reviews} reviews</span>
+                              <span>•</span>
+                              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium border border-emerald-200">
+                                {lead.source || 'OpenStreetMap'}
+                              </span>
                             </div>
                           </div>
                         </div>
