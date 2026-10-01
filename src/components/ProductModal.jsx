@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, DollarSign, Gift, MapPin, Phone, Check } from 'lucide-react';
+import { generateProductSlug } from '../utils/productData';
 
 const PRESET_IMAGES = [
   { label: 'Desk & Furniture', url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80' },
@@ -26,8 +27,12 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
     e.preventDefault();
     if (!title.trim()) return;
 
+    const prodId = editingProduct ? editingProduct.id : `prod-${Date.now()}`;
+    const slug = editingProduct?.slug || generateProductSlug(title.trim(), prodId);
+
     const productData = {
-      id: editingProduct ? editingProduct.id : `prod-${Date.now()}`,
+      id: prodId,
+      slug,
       title: title.trim(),
       category,
       price: category === 'donation' ? '0' : price.trim() || '0',

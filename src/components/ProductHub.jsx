@@ -14,9 +14,11 @@ import {
   Check, 
   MessageCircle,
   Globe,
-  X
+  X,
+  Link as LinkIcon
 } from 'lucide-react';
 import ProductModal from './ProductModal';
+import { generateProductSlug } from '../utils/productData';
 
 // Instagram Vector Icon
 function InstagramIcon({ className = "w-3.5 h-3.5" }) {
@@ -88,8 +90,11 @@ export default function ProductHub({ products, onUpdateProducts }) {
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [tempDomainInput, setTempDomainInput] = useState('');
 
-  // Notifications & Copy state
-  const [copiedAction, setCopiedAction] = useState(null); // e.g. `${product.id}-instagram`, `${product.id}-copy`
+  // Target direct product from URL (?product=id or #product-id)
+  const [highlightedProductId, setHighlightedProductId] = useState(null);
+
+  // Notifications & Copy feedback
+  const [copiedAction, setCopiedAction] = useState(null);
   const [notificationMessage, setNotificationMessage] = useState(null);
 
   // Auto-dismiss notification after 5 seconds
@@ -100,6 +105,45 @@ export default function ProductHub({ products, onUpdateProducts }) {
     }, 5000);
     return () => clearTimeout(timer);
   }, [notificationMessage]);
+
+  // Deep Link Detection and Auto-Scroll to Target Product
+  useEffect(() => {
+    const detectTargetProduct = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const queryId = params.get('product');
+      const hash = window.location.hash || '';
+      const hashId = hash.startsWith('#product-') ? hash.replace('#product-', '') : (hash.startsWith('#') ? hash.substring(1) : null);
+      
+      const targetId = queryId || hashId;
+      if (targetId) {
+        setHighlightedProductId(targetId);
+        
+        // Find matching product in list
+        const matched = products.find(p => p.id === targetId || p.slug === targetId);
+        if (matched) {
+          // If current category filter hides it, switch to 'all' so it is visible
+          setFilter(prevFilter => (prevFilter !== 'all' && prevFilter !== matched.category ? 'all' : prevFilter));
+        }
+
+        // Scroll target card into view smoothly
+        setTimeout(() => {
+          const el = document.getElementById(`product-${targetId}`) || document.getElementById(targetId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 250);
+      }
+    };
+
+    detectTargetProduct();
+    window.addEventListener('hashchange', detectTargetProduct);
+    window.addEventListener('popstate', detectTargetProduct);
+    return () => {
+      window.removeEventListener('hashchange', detectTargetProduct);
+      window.removeEventListener('popstate', detectTargetProduct);
+    };
+  }, [products]);
 
   // Compute metrics
   const totalListings = products.length;
@@ -122,12 +166,14 @@ export default function ProductHub({ products, onUpdateProducts }) {
     setIsDomainModalOpen(false);
   };
 
-  // Formatter for rich social shares (includes Title, Price, Description, Location, Contact, and Live URL)
+  // Formatter for rich social shares pointing DIRECTLY to the specific individual product
   const getProductShareData = (product) => {
     const isDonation = product.category === 'donation';
     const priceDisplay = isDonation ? '🎁 FREE DONATION' : `💰 Price: ₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
     const rawPrice = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
-    const productUrl = `${productionDomain}/#product-${encodeURIComponent(product.id)}`;
+    
+    // Direct product link constructed with both query param (?product=id) and hash anchor (#product-id)
+    const directProductUrl = `${productionDomain}/?product=${encodeURIComponent(product.id)}#product-${encodeURIComponent(product.id)}`;
 
     // WhatsApp formatted text with bold styling
     const whatsAppText = 
@@ -138,12 +184,13 @@ ${priceDisplay}
 📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Product Link: ${productUrl}
+${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
+${directProductUrl}
 
 Shared via Aura Resale & Donation Hub`;
 
-    // Facebook quote & link
-    const facebookQuote = `${product.title} (${priceDisplay}) - ${product.description || 'Check out this listing on Aura Hub'}`;
+    // Facebook quote & direct link
+    const facebookQuote = `🛍️ ${product.title} (${priceDisplay}) - ${product.description || ''} | Direct Link: ${directProductUrl}`;
 
     // Instagram formatted caption (with hashtags & structured spacing)
     const instagramCaption = 
@@ -155,14 +202,15 @@ Shared via Aura Resale & Donation Hub`;
 📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${productUrl}
+${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
+${directProductUrl}
 
-#resale #preloved #donation #${product.category} #${(product.city || 'local').toLowerCase().replace(/[^a-z0-9]/g, '')} #aurahub #community`;
+#resale #preloved #donation #${product.category} #${(product.city || 'local').toLowerCase().replace(/[^a-z0-9]/g, '')} #aurahub`;
 
     return {
       title: product.title,
       priceDisplay,
-      productUrl,
+      directProductUrl,
       whatsAppText,
       facebookQuote,
       instagramCaption
@@ -176,14 +224,14 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Facebook Share handler (uses dynamic production base URL)
+  // Facebook Share handler (uses direct product URL for the Facebook preview scraper)
   const handleFacebookShare = (product) => {
     const data = getProductShareData(product);
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(data.productUrl)}&quote=${encodeURIComponent(data.facebookQuote)}`;
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(data.directProductUrl)}&quote=${encodeURIComponent(data.facebookQuote)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Instagram Share handler (copies formatted caption and alerts user)
+  // Instagram Share handler (copies formatted caption with direct product link and alerts user)
   const handleInstagramShare = (product) => {
     const data = getProductShareData(product);
     navigator.clipboard.writeText(data.instagramCaption);
@@ -195,12 +243,21 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
-  // Copy details & live link
+  // Copy full details & direct link
   const handleCopyDetails = (product) => {
     const data = getProductShareData(product);
     navigator.clipboard.writeText(data.whatsAppText);
     setCopiedAction(`${product.id}-copy`);
-    setNotificationMessage('Product details & live link copied to clipboard.');
+    setNotificationMessage(`Product details & direct link for "${product.title}" copied!`);
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
+
+  // Copy direct product URL only
+  const handleCopyDirectLinkOnly = (product) => {
+    const data = getProductShareData(product);
+    navigator.clipboard.writeText(data.directProductUrl);
+    setCopiedAction(`${product.id}-link`);
+    setNotificationMessage(`Direct link for "${product.title}" copied!`);
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
@@ -294,7 +351,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
             {productionDomain}
           </code>
           <span className="text-[11px] text-slate-500">
-            (Shared links point to this live site instead of localhost)
+            (Product share links route to this live site instead of localhost)
           </span>
         </div>
         <button
@@ -393,12 +450,39 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
         ) : (
           filteredProducts.map(product => {
             const isDonation = product.category === 'donation';
+            const isTarget = highlightedProductId === product.id || highlightedProductId === product.slug;
+            const shareData = getProductShareData(product);
 
             return (
               <div
                 key={product.id}
-                className="group rounded-2xl bg-white/95 border border-amber-200/80 overflow-hidden shadow-xs hover:shadow-lg hover:border-amber-300 transition-all duration-300 flex flex-col justify-between"
+                id={`product-${product.id}`}
+                data-product-id={product.id}
+                data-product-slug={product.slug || generateProductSlug(product.title, product.id)}
+                className={`group rounded-2xl bg-white/95 border overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between scroll-mt-24 ${
+                  isTarget
+                    ? 'border-amber-500 ring-4 ring-amber-400/40 shadow-xl scale-[1.01]'
+                    : 'border-amber-200/80 hover:border-amber-300'
+                }`}
               >
+                {/* Target Linked Item Banner */}
+                {isTarget && (
+                  <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-3.5 py-1.5 text-xs font-bold flex items-center justify-between shadow-xs">
+                    <span className="flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>Shared Product Linked Directly</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHighlightedProductId(null)}
+                      className="text-slate-950 hover:bg-black/10 px-1 rounded font-mono text-xs cursor-pointer"
+                      title="Dismiss highlight"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Image & Badges */}
                 <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
                   <img
@@ -438,10 +522,21 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       {product.title}
                     </h3>
 
-                    {/* Location */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 font-medium">
-                      <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span className="truncate">{product.city}</span>
+                    {/* Location and Direct Link Copy Pill */}
+                    <div className="flex items-center justify-between text-xs text-slate-500 mt-1 font-medium gap-1">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="truncate">{product.city}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyDirectLinkOnly(product)}
+                        title="Copy direct product URL"
+                        className="text-[10px] text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 font-mono font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1 shadow-2xs"
+                      >
+                        <LinkIcon className="w-2.5 h-2.5 text-amber-700" />
+                        <span>{copiedAction === `${product.id}-link` ? 'Copied' : `#${product.id}`}</span>
+                      </button>
                     </div>
 
                     {/* Description */}
@@ -458,15 +553,15 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                     </div>
                   )}
 
-                  {/* Social Share Buttons */}
+                  {/* Social Share Buttons with Specific Product Deep Link */}
                   <div className="mt-3 pt-2.5 border-t border-amber-100 space-y-2">
                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <Share2 className="w-3 h-3 text-amber-600" />
-                        <span>Direct Social Share:</span>
+                        <span>Share Specific Item:</span>
                       </div>
-                      <span className="text-[10px] text-amber-800/80 font-normal lowercase font-mono truncate max-w-[120px]" title={`Share base domain: ${productionDomain}`}>
-                        {productionDomain.replace(/^https?:\/\//, '')}
+                      <span className="text-[10px] text-amber-800/90 font-medium font-mono truncate max-w-[130px]" title={shareData.directProductUrl}>
+                        ?product={product.id}
                       </span>
                     </div>
 
@@ -475,7 +570,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       <button
                         type="button"
                         onClick={() => handleWhatsAppShare(product)}
-                        title="Share on WhatsApp with live link, price, and description"
+                        title="Share on WhatsApp with direct product link, price, and description"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/20 shrink-0" />
@@ -486,7 +581,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       <button
                         type="button"
                         onClick={() => handleFacebookShare(product)}
-                        title="Share on Facebook with live preview URL"
+                        title="Share on Facebook with direct preview URL to this item"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         <FacebookIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -497,7 +592,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       <button
                         type="button"
                         onClick={() => handleInstagramShare(product)}
-                        title="Copy Instagram post/story caption & hashtags"
+                        title="Copy Instagram caption formatted specifically for this item"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-900 border border-pink-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-instagram` ? (
@@ -517,7 +612,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       <button
                         type="button"
                         onClick={() => handleCopyDetails(product)}
-                        title="Copy formatted product text & live URL"
+                        title="Copy direct product link & full details to clipboard"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-copy` ? (
@@ -541,7 +636,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                           setEditingProduct(product);
                           setIsModalOpen(true);
                         }}
-                        className="p-1 rounded-md hover:bg-slate-100 hover:text-amber-800 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        className="p-1 rounded-md hover:bg-slate-100 hover:text-amber-800 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
                         title="Edit product"
                       >
                         <Edit2 className="w-3 h-3" />
@@ -550,7 +645,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
                       <span>•</span>
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="p-1 rounded-md hover:bg-rose-50 hover:text-rose-600 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        className="p-1 rounded-md hover:bg-rose-50 hover:text-rose-600 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
                         title="Delete product"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -578,7 +673,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Live Link: ${prod
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-bold text-pink-300">
               <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Instagram Caption Ready</span>
+              <span>Share Ready</span>
             </div>
             <p className="text-xs text-slate-200 font-medium mt-1 leading-relaxed">
               {notificationMessage}

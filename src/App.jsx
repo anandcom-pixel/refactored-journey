@@ -42,8 +42,34 @@ const INITIAL_NOTES = `⚡ Daily Quick Notes
 export default function App() {
   // Navigation: 'productivity', 'resale-hub', 'lead-scraper'
   const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      if (search.includes('product=') || hash.includes('product-')) {
+        return 'resale-hub';
+      }
+    }
     return localStorage.getItem('aura_active_tab') || 'productivity';
   });
+
+  // Automatically switch tab when deep link is detected
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      if (search.includes('product=') || hash.includes('product-')) {
+        setActiveTab('resale-hub');
+      }
+    };
+
+    handleUrlChange();
+    window.addEventListener('hashchange', handleUrlChange);
+    window.addEventListener('popstate', handleUrlChange);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
 
   // 1. User Name
   const [userName, setUserName] = useState(() => {

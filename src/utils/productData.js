@@ -1,6 +1,15 @@
+export function generateProductSlug(title, id) {
+  const cleanTitle = (title || 'item')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return `${cleanTitle}-${id}`;
+}
+
 export const INITIAL_PRODUCTS = [
   {
     id: 'prod-1',
+    slug: 'solid-teak-wood-study-office-desk-prod-1',
     title: 'Solid Teak Wood Study & Office Desk',
     category: 'resale',
     price: '4200',
@@ -13,6 +22,7 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-2',
+    slug: 'college-textbooks-cse-prod-2',
     title: 'Engineering & Mathematics College Textbooks',
     category: 'donation',
     price: '0',
@@ -25,6 +35,7 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-3',
+    slug: 'mountain-bicycle-hero-sprint-prod-3',
     title: 'Gently Used 21-Speed Mountain Bicycle',
     category: 'resale',
     price: '6500',
@@ -37,6 +48,7 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-4',
+    slug: 'baby-high-chair-walker-prod-4',
     title: 'Baby High Chair & Play Walker',
     category: 'donation',
     price: '0',
