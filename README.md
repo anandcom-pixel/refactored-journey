@@ -2,73 +2,63 @@
 
 A sleek, modern, single-page personal productivity dashboard built with **React 19**, **Tailwind CSS v4**, and **Vite**.
 
-![Dashboard Preview](https://img.shields.io/badge/Aura-Productivity-indigo?style=for-the-badge)
+![Dashboard Status](https://img.shields.io/badge/Aura-Production%20Ready-amber?style=for-the-badge)
+![Deployment](https://img.shields.io/badge/Vercel-Ready-black?style=for-the-badge&logo=vercel)
 
 ---
 
-## ✨ Features Included
+## ✨ Features
 
-### 1. 🕒 Live Digital Clock & Calendar
-- Real-time digital clock with seconds indicator and live pulse dot.
-- Toggle between **12-Hour (AM/PM)** and **24-Hour** military format.
-- Displays full day of week, formatted date, and local timezone name.
-
-### 2. 💬 Customizable Greeting & Daily Quotes / Mantra
-- Time-of-day dynamic greeting (*Good morning*, *Good afternoon*, *Good evening*, *Good night*).
-- Clickable & customizable user name stored in `localStorage`.
-- Curated daily wisdom bank featuring timeless quotes on focus, discipline, and simplicity.
-- **Custom Mantra Editor**: Enter your personal quote or affirmation for the day, saved locally.
-- Quick copy-to-clipboard button.
-
-### 3. ✅ Interactive To-Do List
-- Add tasks with title, **Priority** (*High, Medium, Low*), and **Category** (*Focus, Work, Personal, Learning*).
-- Mark complete with instant audio chime feedback and confetti celebration upon clearing tasks!
-- Progress bar displaying completed task percentage.
-- Filter tabs: **All**, **Active**, **Completed**, plus a quick search bar.
-- Inline task title editing and deletion.
-- Persisted seamlessly in `localStorage`.
-
-### 4. 🍅 Built-In Pomodoro Focus Timer
-- 25-minute standard focus block countdown.
-- Modes: **Focus (25m)**, **Short Break (5m)**, and **Long Break (15m)**.
-- Circular SVG progress ring that animates as seconds count down.
-- **Start**, **Pause**, and **Reset** controls with **+1m** and **+5m** quick extensions.
-- Dynamic browser tab title updater: see remaining time directly from any browser tab (*e.g., `(24:15) Focus | Aura`*).
-- Web Audio API notification chime upon session completion.
-- Completed session streak counter.
-
-### 5. 📝 Quick Minimalist Scratchpad Notes
-- Minimalist distraction-free notes editor.
-- Automatic background auto-saving to `localStorage` on every keystroke with a live "Saved" indicator.
-- Word count and character count.
-- Insert live timestamp `[HH:MM]` or bullet points with one click.
-- One-click copy note to clipboard or download as a `.txt` file.
-
-### 6. 🎨 Ambient Aesthetic Themes & Keyboard Shortcuts
-- 4 curated ambient themes: *Obsidian Night*, *Cyber Slate*, *Deep Forest*, and *Sunset Aura*.
-- Keyboard shortcuts:
-  - `Space`: Toggle Pomodoro timer
-  - `N`: Quick focus on Add Task input
-  - `T`: Switch theme
-  - `?`: Open keyboard shortcuts cheat sheet
+- **🕒 Live Digital Clock & Calendar**: High-contrast digital clock with seconds, 12H/24H toggle, live pulse indicator, full date, and timezone.
+- **💬 Customizable Greeting & Mantra**: Time-of-day greeting (*Good morning, afternoon, evening*), editable user name, curated quote shuffle, and custom daily mantra saved locally.
+- **✅ Interactive To-Do List**: Priority badges (*High, Medium, Low*), categories (*Focus, Work, Personal, Learning*), progress bar, filters (*All, Active, Completed*), search, audio chimes, and celebration confetti.
+- **🍅 Built-in Pomodoro Focus Timer**: 25-minute focus sprints, short/long breaks, circular SVG animated ring, audio chime, streak counter, and dynamic browser tab title updater.
+- **📝 Quick Minimalist Scratchpad**: Distraction-free scratchpad with auto-save to `localStorage`, word/character counters, one-click copy, timestamp insertion, and `.txt` export.
+- **🎨 Warm & Energetic Theme**: Clean light cream background, crisp white panels, vibrant golden-amber accents, and high-contrast dark charcoal text.
+- **⌨️ Keyboard Shortcuts**: `Space` (Start/Pause timer), `N` (Add task), `T` (Cycle themes), `?` (Shortcuts cheat sheet).
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Local Development
 
-### Local Development
 ```bash
-# Navigate to project
-cd "C:\Users\USER\.gemini\antigravity\scratch\productivity-dashboard"
+# Install dependencies
+npm install
 
-# Start the dev server
+# Start development server
 npm run dev
-```
 
-Visit [http://127.0.0.1:5173/](http://127.0.0.1:5173/) in your web browser.
+# Run linter
+npm run lint
 
-### Production Build
-```bash
+# Production build
 npm run build
+
+# Preview production build locally
 npm run preview
 ```
+
+---
+
+## 📦 Pushing to GitHub & Deploying to Vercel
+
+### Step 1: Push to GitHub
+
+1. Create a new empty repository on [GitHub](https://github.com/new) (e.g. `productivity-dashboard`). Do not initialize with README, .gitignore, or license.
+2. In your local terminal, add the remote and push:
+```bash
+git remote add origin https://github.com/<YOUR_USERNAME>/productivity-dashboard.git
+git push -u origin main
+```
+
+### Step 2: Deploy to Vercel
+
+1. Log in to [Vercel](https://vercel.com).
+2. Click **"Add New..."** > **"Project"**.
+3. Select your newly created GitHub repository.
+4. Vercel automatically detects the project settings:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `vite build`
+   - **Output Directory**: `dist`
+   - **Install Command**: `npm install`
+5. Click **"Deploy"**. Your application will be live worldwide in seconds!
