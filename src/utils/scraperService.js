@@ -186,8 +186,16 @@ export const INITIAL_REAL_LEADS = [
 export async function fetchRealPlacesClient(city, industry) {
   const cleanCity = (city || 'Thiruvananthapuram').trim();
   const cleanInd = (industry || 'Restaurants').trim();
-  const query = `${cleanInd} in ${cleanCity}`;
 
+  // Normalize query terms for OpenStreetMap search
+  let queryTerms = cleanInd;
+  if (/shoes/i.test(cleanInd) && /footwear/i.test(cleanInd)) {
+    queryTerms = 'Footwear';
+  } else {
+    queryTerms = cleanInd.replace(/[&/\\#,+()$~%.'":*?<>{}]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  const query = `${queryTerms} in ${cleanCity}`;
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&extratags=1&limit=15`;
 
   try {

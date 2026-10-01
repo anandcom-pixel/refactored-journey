@@ -17,34 +17,61 @@ import {
   RefreshCw, 
   ShieldCheck, 
   Flame, 
-  MessageCircle
+  MessageCircle,
+  X
 } from 'lucide-react';
 import { searchLeads, exportLeadsToCsv, INITIAL_REAL_LEADS } from '../utils/scraperService';
 
+const COMMON_CATEGORIES = [
+  { value: 'Restaurants', label: '🍽️ Restaurants & Dining' },
+  { value: 'Shoes & Footwear', label: '👟 Shoes & Footwear' },
+  { value: 'Retail', label: '🛍️ Retail Stores' },
+  { value: 'Fitness', label: '🏋️ Fitness & Gyms' },
+  { value: 'Hotels', label: '🏨 Hotels & Hospitality' },
+  { value: 'Bakeries & Cafes', label: '☕ Bakeries & Cafes' },
+  { value: 'Salons & Spas', label: '💇 Salons & Beauty Spas' },
+  { value: 'Tech Startups', label: '💻 Tech & IT Services' },
+  { value: 'custom', label: '✏️ Custom / Type Your Own...' },
+];
+
 const PRESET_SEARCHES = [
   { city: 'Thiruvananthapuram', industry: 'Restaurants' },
+  { city: 'Thiruvananthapuram', industry: 'Shoes & Footwear' },
+  { city: 'Thiruvananthapuram', industry: 'Fitness' },
   { city: 'Thiruvananthapuram', industry: 'Hotels' },
-  { city: 'Kochi', industry: 'Tech Startups' },
-  { city: 'Bangalore', industry: 'Retail Stores' },
-  { city: 'Chennai', industry: 'Bakeries & Cafes' }
+  { city: 'Kochi', industry: 'Retail' },
+  { city: 'Bangalore', industry: 'Tech Startups' }
 ];
 
 export default function LeadScraper() {
   const [city, setCity] = useState('Thiruvananthapuram');
-  const [industry, setIndustry] = useState('Restaurants');
+  const [selectedCategory, setSelectedCategory] = useState('Restaurants');
+  const [customCategory, setCustomCategory] = useState('');
+  const [isCustomMode, setIsCustomMode] = useState(false);
   const [leads, setLeads] = useState(() => INITIAL_REAL_LEADS);
   const [isLoading, setIsLoading] = useState(false);
   const [filterType, setFilterType] = useState('all'); // 'all', 'opportunities', 'healthy', 'no-website'
   const [copiedId, setCopiedId] = useState(null);
   const [lastSearched, setLastSearched] = useState({ city: 'Thiruvananthapuram', industry: 'Restaurants' });
 
-  const handleSearch = async (c = city, ind = industry) => {
-    if (!c.trim() || !ind.trim()) return;
+  const getEffectiveCategory = (overrideInd) => {
+    if (overrideInd !== undefined && overrideInd !== null) return overrideInd;
+    if (isCustomMode) {
+      return customCategory.trim() || 'Retail';
+    }
+    return selectedCategory;
+  };
+
+  const handleSearch = async (c = city, ind) => {
+    const searchCity = (c || city).trim();
+    const searchInd = getEffectiveCategory(ind);
+    if (!searchCity || !searchInd) return;
+
     setIsLoading(true);
     try {
-      const results = await searchLeads(c, ind);
+      const results = await searchLeads(searchCity, searchInd);
       setLeads(results);
-      setLastSearched({ city: c, industry: ind });
+      setLastSearched({ city: searchCity, industry: searchInd });
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,7 +81,14 @@ export default function LeadScraper() {
 
   const handlePresetClick = (p) => {
     setCity(p.city);
-    setIndustry(p.industry);
+    const match = COMMON_CATEGORIES.find(c => c.value.toLowerCase() === p.industry.toLowerCase());
+    if (match) {
+      setSelectedCategory(match.value);
+      setIsCustomMode(false);
+    } else {
+      setCustomCategory(p.industry);
+      setIsCustomMode(true);
+    }
     handleSearch(p.city, p.industry);
   };
 
@@ -131,67 +165,174 @@ export default function LeadScraper() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSearch(city, industry);
+            handleSearch();
           }}
-          className="grid grid-cols-1 sm:grid-cols-12 gap-3"
+          className="space-y-3"
         >
-          {/* City Input */}
-          <div className="sm:col-span-5 relative">
-            <MapPin className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-            <input
-              type="text"
-              required
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Target City (e.g. Thiruvananthapuram, Bangalore)..."
-              className="w-full bg-slate-50 text-xs text-slate-900 placeholder-slate-400 pl-9 pr-3 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            {/* Location Input */}
+            <div className="sm:col-span-5 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Target Location / Region</span>
+                </span>
+                {city !== 'Thiruvananthapuram' && (
+                  <button
+                    type="button"
+                    onClick={() => setCity('Thiruvananthapuram')}
+                    className="text-[10px] text-amber-800 hover:text-amber-950 font-semibold underline cursor-pointer"
+                  >
+                    Reset default
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <MapPin className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Enter city, town, or region (e.g. Thiruvananthapuram)..."
+                  className="w-full bg-slate-50 text-xs text-slate-900 placeholder-slate-400 pl-9 pr-8 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors font-medium"
+                />
+                {city && (
+                  <button
+                    type="button"
+                    onClick={() => setCity('')}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5 rounded-md cursor-pointer"
+                    title="Clear location text"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
 
-          {/* Industry / Keyword Input */}
-          <div className="sm:col-span-5 relative">
-            <Briefcase className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-            <input
-              type="text"
-              required
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="Industry / Keyword (e.g. Restaurants, Retail)..."
-              className="w-full bg-slate-50 text-xs text-slate-900 placeholder-slate-400 pl-9 pr-3 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
-            />
-          </div>
+            {/* Category / Industry Input */}
+            <div className="sm:col-span-5 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                <span className="flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Category / Industry</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomMode(!isCustomMode);
+                    if (!isCustomMode && !customCategory) {
+                      setCustomCategory(selectedCategory);
+                    }
+                  }}
+                  className="text-[10px] text-amber-900 hover:text-amber-950 font-bold bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md border border-amber-300 transition-colors cursor-pointer"
+                >
+                  {isCustomMode ? '← Common Dropdown' : '✏️ Custom Text Box'}
+                </button>
+              </div>
 
-          {/* Search Button */}
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer"
-            >
-              {isLoading ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Scanning...</span>
-                </>
-              ) : (
-                <>
-                  <Search className="w-3.5 h-3.5" />
-                  <span>Find Leads</span>
-                </>
-              )}
-            </button>
+              <div className="relative">
+                <Briefcase className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                {isCustomMode ? (
+                  <input
+                    type="text"
+                    required
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="Type custom category (e.g. Shoes & Footwear, Fitness, Retail)..."
+                    className="w-full bg-slate-50 text-xs text-slate-900 placeholder-slate-400 pl-9 pr-8 py-2.5 rounded-xl border border-amber-300 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors font-medium ring-1 ring-amber-300/40"
+                    autoFocus
+                  />
+                ) : (
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setIsCustomMode(true);
+                        setCustomCategory('');
+                      } else {
+                        setSelectedCategory(e.target.value);
+                      }
+                    }}
+                    className="w-full bg-slate-50 text-xs text-slate-900 pl-9 pr-8 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors font-medium cursor-pointer"
+                  >
+                    {COMMON_CATEGORIES.map(cat => (
+                      <option key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Search Leads Button */}
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/25 transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Searching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Search Leads</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
 
-        {/* Quick Suggestion Chips */}
+        {/* Quick Category Suggestions */}
         <div className="flex items-center gap-1.5 flex-wrap pt-1 text-xs">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick Suggestions:</span>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            Quick Categories:
+          </span>
+          {[
+            { label: '👟 Shoes & Footwear', cat: 'Shoes & Footwear' },
+            { label: '🛍️ Retail', cat: 'Retail' },
+            { label: '🍽️ Restaurants', cat: 'Restaurants' },
+            { label: '🏋️ Fitness', cat: 'Fitness' },
+            { label: '🏨 Hotels', cat: 'Hotels' },
+            { label: '☕ Cafes', cat: 'Bakeries & Cafes' }
+          ].map((chip, idx) => {
+            const isActive = !isCustomMode && selectedCategory === chip.cat;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setIsCustomMode(false);
+                  setSelectedCategory(chip.cat);
+                  handleSearch(city, chip.cat);
+                }}
+                className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold border transition-all cursor-pointer shadow-2xs ${
+                  isActive
+                    ? 'bg-amber-500 text-slate-950 border-amber-600 font-bold shadow-xs'
+                    : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200'
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Popular Searches:</span>
           {PRESET_SEARCHES.map((p, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handlePresetClick(p)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200 transition-colors cursor-pointer shadow-2xs"
+              className="text-[11px] px-2.5 py-0.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium border border-slate-200 transition-colors cursor-pointer"
             >
               {p.city} • {p.industry}
             </button>
@@ -289,8 +430,13 @@ export default function LeadScraper() {
               {isLoading ? (
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-slate-500">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-amber-500 mb-2" />
-                    <p className="font-semibold text-slate-700">Scraping listings and running website technical audit...</p>
+                    <RefreshCw className="w-7 h-7 animate-spin mx-auto text-amber-500 mb-2" />
+                    <p className="font-bold text-slate-800 text-sm">
+                      Searching real listings & running live technical website audits...
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Querying directory for <span className="font-bold text-amber-800">{isCustomMode ? customCategory : selectedCategory}</span> in <span className="font-bold text-amber-800">{city}</span>
+                    </p>
                   </td>
                 </tr>
               ) : filteredLeads.length === 0 ? (
