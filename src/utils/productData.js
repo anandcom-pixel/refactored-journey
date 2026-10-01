@@ -115,3 +115,48 @@ export function compressImageFile(file, maxDim = 1200, quality = 0.82) {
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Converts an image source (data URL or web URL) to a File object
+ * so it can be packaged into navigator.share({ files: [...] }).
+ */
+export async function getFileFromImageUrl(imageUrl, title = 'product') {
+  if (!imageUrl) return null;
+  const cleanName = (title || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+
+  // 1. Base64 Data URL (e.g. from local device upload)
+  if (imageUrl.startsWith('data:image/')) {
+    try {
+      const arr = imageUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      return new File([u8arr], `${cleanName}.${ext}`, { type: mime });
+    } catch (e) {
+      console.warn('Failed to parse data URL into File:', e);
+      return null;
+    }
+  }
+
+  // 2. Remote HTTP/HTTPS URL
+  if (/^https?:\/\//i.test(imageUrl)) {
+    try {
+      const response = await fetch(imageUrl, { mode: 'cors' });
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      return new File([blob], `${cleanName}.${ext}`, { type: blob.type || 'image/jpeg' });
+    } catch (e) {
+      console.warn('Failed to fetch remote image for sharing:', e);
+      return null;
+    }
+  }
+
+  return null;
+}
+

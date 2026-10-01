@@ -19,7 +19,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import ProductModal from './ProductModal';
-import { generateProductSlug } from '../utils/productData';
+import { generateProductSlug, getFileFromImageUrl } from '../utils/productData';
 
 // Instagram Vector Icon
 function InstagramIcon({ className = "w-3.5 h-3.5" }) {
@@ -224,9 +224,53 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
     };
   };
 
-  // WhatsApp Share handler (shares ONLY product details, no URLs)
-  const handleWhatsAppShare = (product) => {
+  // Individual Product Share handler: Uses Web Share API with image file & details when supported, falls back gracefully to WhatsApp & clipboard
+  const handleWhatsAppShare = async (product) => {
     const data = getProductShareData(product);
+
+    // 1. Check if browser supports the native Web Share API (navigator.share)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        let imageFile = null;
+        if (product.imageUrl) {
+          imageFile = await getFileFromImageUrl(product.imageUrl, product.title);
+        }
+
+        // Check if the device/browser can share files (e.g. mobile devices, Android/iOS)
+        if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+          await navigator.share({
+            title: product.title,
+            text: data.whatsAppText,
+            files: [imageFile]
+          });
+          setNotificationMessage('Photo & product details shared successfully!');
+          return;
+        }
+
+        // If file sharing is not supported, check if text can be shared natively
+        const textShareData = { title: product.title, text: data.whatsAppText };
+        if (navigator.canShare ? navigator.canShare(textShareData) : true) {
+          await navigator.share(textShareData);
+          setNotificationMessage('Product details shared successfully!');
+          return;
+        }
+      } catch (err) {
+        // If user cancelled the share sheet, exit cleanly without error
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.warn('Native share failed or not allowed, falling back to WhatsApp Web/clipboard:', err);
+      }
+    }
+
+    // 2. Graceful fallback: Copy text to clipboard and open WhatsApp
+    try {
+      await navigator.clipboard.writeText(data.whatsAppText);
+      setNotificationMessage('Product details copied to clipboard! Opening WhatsApp...');
+    } catch {
+      setNotificationMessage('Opening WhatsApp with product details...');
+    }
+
     const url = `https://wa.me/?text=${encodeURIComponent(data.whatsAppText)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
