@@ -22,21 +22,21 @@ import {
 import { searchLeads, exportLeadsToCsv, INITIAL_REAL_LEADS } from '../utils/scraperService';
 
 const PRESET_SEARCHES = [
-  { city: 'Kochi', industry: 'Restaurants' },
-  { city: 'Bangalore', industry: 'Retail Stores' },
+  { city: 'Thiruvananthapuram', industry: 'Restaurants' },
+  { city: 'Thiruvananthapuram', industry: 'Hotels' },
   { city: 'Kochi', industry: 'Tech Startups' },
-  { city: 'Mumbai', industry: 'Fitness & Gyms' },
+  { city: 'Bangalore', industry: 'Retail Stores' },
   { city: 'Chennai', industry: 'Bakeries & Cafes' }
 ];
 
 export default function LeadScraper() {
-  const [city, setCity] = useState('Kochi');
+  const [city, setCity] = useState('Thiruvananthapuram');
   const [industry, setIndustry] = useState('Restaurants');
   const [leads, setLeads] = useState(() => INITIAL_REAL_LEADS);
   const [isLoading, setIsLoading] = useState(false);
   const [filterType, setFilterType] = useState('all'); // 'all', 'opportunities', 'healthy', 'no-website'
   const [copiedId, setCopiedId] = useState(null);
-  const [lastSearched, setLastSearched] = useState({ city: 'Kochi', industry: 'Restaurants' });
+  const [lastSearched, setLastSearched] = useState({ city: 'Thiruvananthapuram', industry: 'Restaurants' });
 
   const handleSearch = async (c = city, ind = industry) => {
     if (!c.trim() || !ind.trim()) return;
@@ -143,7 +143,7 @@ export default function LeadScraper() {
               required
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Target City (e.g. Kochi, Bangalore)..."
+              placeholder="Target City (e.g. Thiruvananthapuram, Bangalore)..."
               className="w-full bg-slate-50 text-xs text-slate-900 placeholder-slate-400 pl-9 pr-3 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
             />
           </div>

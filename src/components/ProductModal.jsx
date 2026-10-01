@@ -15,7 +15,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
   const [category, setCategory] = useState(() => editingProduct?.category || 'resale');
   const [price, setPrice] = useState(() => editingProduct?.price ? String(editingProduct.price) : '');
   const [condition, setCondition] = useState(() => editingProduct?.condition || 'Like New');
-  const [city, setCity] = useState(() => editingProduct?.city || 'Kochi');
+  const [city, setCity] = useState(() => editingProduct?.city || 'Thiruvananthapuram');
   const [phone, setPhone] = useState(() => editingProduct?.phone || '');
   const [description, setDescription] = useState(() => editingProduct?.description || '');
   const [imageUrl, setImageUrl] = useState(() => editingProduct?.imageUrl || PRESET_IMAGES[0].url);
@@ -188,7 +188,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. Kochi, Kerala"
+                  placeholder="e.g. Thiruvananthapuram, Kerala"
                   className="w-full bg-slate-50 text-slate-900 text-sm pl-9 pr-3.5 py-2 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
                 />
               </div>

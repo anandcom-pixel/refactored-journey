@@ -254,7 +254,7 @@ export function convertToCsv(leadsWithAudits) {
 
 // CLI runner
 if (process.argv[1] && process.argv[1].endsWith('scraper.js')) {
-  const cityArg = process.argv[2] || 'Kochi';
+  const cityArg = process.argv[2] || 'Thiruvananthapuram';
   const industryArg = process.argv[3] || 'Restaurants';
   const shouldExport = process.argv.includes('--export');
 

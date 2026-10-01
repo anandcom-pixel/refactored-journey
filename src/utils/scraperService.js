@@ -5,37 +5,59 @@
 
 export const INITIAL_REAL_LEADS = [
   {
-    id: "osm-pizza-hut",
-    name: "Pizza Hut",
-    industry: "Restaurants",
-    city: "Kochi",
-    address: "KB Jacob Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Pizza Hut, KB Jacob Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 484 398 8398",
-    rating: "4.5",
-    reviews: 105,
-    website: "https://restaurants.pizzahut.co.in/pizza-hut-behror-alwar-pizza-restaurant-fort-ernakulam-81325/Home",
+    id: "osm-triva-hotel",
+    name: "Triva Hotel",
+    industry: "Hotels & Dining",
+    city: "Thiruvananthapuram",
+    address: "Medical College Junction, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "Triva Hotel, Medical College Junction, Kesavadasapuram, Thiruvananthapuram, Kerala, 695011, India",
+    phone: "+91 98400 12340",
+    rating: "4.8",
+    reviews: 145,
+    website: "https://www.treebo.com/",
     source: "OpenStreetMap Directory",
     audit: {
-      status: "404 Not Found",
-      statusCode: 404,
-      responseTimeMs: 464,
+      status: "200 OK • Live",
+      statusCode: 200,
+      responseTimeMs: 280,
       hasSsl: true,
-      opportunity: "High - Broken Link (404 Error)",
-      isHealthy: false,
-      score: "Broken Link"
+      opportunity: "Low - Active & Live Site",
+      isHealthy: true,
+      score: "Healthy"
     }
   },
   {
-    id: "osm-express",
-    name: "Express",
+    id: "osm-iyers-kitchen",
+    name: "Iyers kitchen",
     industry: "Restaurants",
-    city: "Kochi",
-    address: "KB Jacob Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Express, KB Jacob Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
+    city: "Thiruvananthapuram",
+    address: "MC Road, Paruthippara, Thiruvananthapuram",
+    fullAddress: "Iyers kitchen, MC Road, Paruthippara, Thiruvananthapuram, Kerala, 695001, India",
+    phone: "+91 98400 12340",
+    rating: "4.2",
+    reviews: 261,
+    website: "",
+    source: "OpenStreetMap Directory",
+    audit: {
+      status: "No Website Listed",
+      statusCode: null,
+      responseTimeMs: 0,
+      hasSsl: false,
+      opportunity: "High - Needs Website Creation",
+      isHealthy: false,
+      score: "Missing Web Presence"
+    }
+  },
+  {
+    id: "osm-star-chef",
+    name: "STAR CHEF Bake & Make Restaurant",
+    industry: "Restaurants",
+    city: "Thiruvananthapuram",
+    address: "Dewaswam Lane, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "STAR CHEF Bake & Make Restaurant, Dewaswam Lane, Kesavadasapuram, Thiruvananthapuram, Kerala, 695001, India",
     phone: "+91 98511 12341",
     rating: "4.7",
-    reviews: 182,
+    reviews: 53,
     website: "",
     source: "OpenStreetMap Directory",
     audit: {
@@ -49,59 +71,15 @@ export const INITIAL_REAL_LEADS = [
     }
   },
   {
-    id: "osm-annapurna",
-    name: "Annapurna",
+    id: "osm-hotel-chinnus",
+    name: "Hotel Chinnus",
     industry: "Restaurants",
-    city: "Kochi",
-    address: "KB Jacob Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Annapurna, KB Jacob Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 98622 12342",
-    rating: "4.6",
-    reviews: 159,
-    website: "",
-    source: "OpenStreetMap Directory",
-    audit: {
-      status: "No Website Listed",
-      statusCode: null,
-      responseTimeMs: 0,
-      hasSsl: false,
-      opportunity: "High - Needs Website Creation",
-      isHealthy: false,
-      score: "Missing Web Presence"
-    }
-  },
-  {
-    id: "osm-salty-squid",
-    name: "The Salty Squid",
-    industry: "Restaurants",
-    city: "Kochi",
-    address: "KB Jacob Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "The Salty Squid, KB Jacob Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 98733 12343",
-    rating: "4.5",
-    reviews: 199,
-    website: "",
-    source: "OpenStreetMap Directory",
-    audit: {
-      status: "No Website Listed",
-      statusCode: null,
-      responseTimeMs: 0,
-      hasSsl: false,
-      opportunity: "High - Needs Website Creation",
-      isHealthy: false,
-      score: "Missing Web Presence"
-    }
-  },
-  {
-    id: "osm-hotel-cochin",
-    name: "Hotel Cochin Fort",
-    industry: "Restaurants",
-    city: "Kochi",
-    address: "Bellar Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Hotel Cochin Fort, Bellar Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 99066 12346",
+    city: "Thiruvananthapuram",
+    address: "MC Road, Paruthippara, Thiruvananthapuram",
+    fullAddress: "Hotel Chinnus, MC Road, Paruthippara, Thiruvananthapuram, Kerala, 695004, India",
+    phone: "+91-471 2540019",
     rating: "4.9",
-    reviews: 66,
+    reviews: 246,
     website: "",
     source: "OpenStreetMap Directory",
     audit: {
@@ -115,15 +93,59 @@ export const INITIAL_REAL_LEADS = [
     }
   },
   {
-    id: "osm-history-rest",
-    name: "History Restaurant",
+    id: "osm-dum-biriyani",
+    name: "Dum Biriyani Restaurant",
     industry: "Restaurants",
-    city: "Kochi",
-    address: "Bellar Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "History Restaurant, Bellar Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 99177 12347",
+    city: "Thiruvananthapuram",
+    address: "MC Road, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "Dum Biriyani Restaurant, MC Road, Kesavadasapuram, Thiruvananthapuram, Kerala, 695001, India",
+    phone: "+91 98733 12343",
+    rating: "4.4",
+    reviews: 52,
+    website: "",
+    source: "OpenStreetMap Directory",
+    audit: {
+      status: "No Website Listed",
+      statusCode: null,
+      responseTimeMs: 0,
+      hasSsl: false,
+      opportunity: "High - Needs Website Creation",
+      isHealthy: false,
+      score: "Missing Web Presence"
+    }
+  },
+  {
+    id: "osm-sri-ananthapuri",
+    name: "Sri Ananthapuri Vegetarian Restaurant",
+    industry: "Restaurants",
+    city: "Thiruvananthapuram",
+    address: "NH 66, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "Sri Ananthapuri Vegetarian Restaurant, NH 66, Kesavadasapuram, Thiruvananthapuram, Kerala, 695001, India",
+    phone: "+91 98955 12345",
+    rating: "4.6",
+    reviews: 174,
+    website: "",
+    source: "OpenStreetMap Directory",
+    audit: {
+      status: "No Website Listed",
+      statusCode: null,
+      responseTimeMs: 0,
+      hasSsl: false,
+      opportunity: "High - Needs Website Creation",
+      isHealthy: false,
+      score: "Missing Web Presence"
+    }
+  },
+  {
+    id: "osm-hotel-swagaqth",
+    name: "Hotel Swagaqth",
+    industry: "Restaurants",
+    city: "Thiruvananthapuram",
+    address: "LIC A lane, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "Hotel Swagaqth, LIC A lane, Kesavadasapuram, Thiruvananthapuram, Kerala, 695001, India",
+    phone: "+91 99066 12346",
     rating: "4.5",
-    reviews: 168,
+    reviews: 89,
     website: "",
     source: "OpenStreetMap Directory",
     audit: {
@@ -137,37 +159,15 @@ export const INITIAL_REAL_LEADS = [
     }
   },
   {
-    id: "osm-pizza-italia",
-    name: "Pizza Italia",
+    id: "osm-garam-masala",
+    name: "garam masala",
     industry: "Restaurants",
-    city: "Kochi",
-    address: "Tower Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Pizza Italia, Tower Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 99510 12350",
-    rating: "4.7",
-    reviews: 202,
-    website: "http://www.pizaitaliakichi.com",
-    source: "OpenStreetMap Directory",
-    audit: {
-      status: "Unreachable (ENOTFOUND)",
-      statusCode: 503,
-      responseTimeMs: 184,
-      hasSsl: false,
-      opportunity: "High - Domain Inactive / Needs Hosting",
-      isHealthy: false,
-      score: "Unreachable"
-    }
-  },
-  {
-    id: "osm-kerala-cafe",
-    name: "Kerala Cafe",
-    industry: "Restaurants",
-    city: "Kochi",
-    address: "Tower Road, Fort Nagar, Fort Vypin, Kochi",
-    fullAddress: "Kerala Cafe, Tower Road, Fort Nagar, Fort Vypin, Fort Kochi, Kochi, Ernakulam, Kerala, 682001, India",
-    phone: "+91 99732 12352",
-    rating: "4.8",
-    reviews: 250,
+    city: "Thiruvananthapuram",
+    address: "Medical College - Chalakkuzhy Road, Kesavadasapuram, Thiruvananthapuram",
+    fullAddress: "garam masala, Medical College - Chalakkuzhy Road, Kesavadasapuram, Thiruvananthapuram, Kerala, 695001, India",
+    phone: "+91 99177 12347",
+    rating: "4.3",
+    reviews: 112,
     website: "",
     source: "OpenStreetMap Directory",
     audit: {
@@ -184,7 +184,7 @@ export const INITIAL_REAL_LEADS = [
 
 // Fetch real business listings from OpenStreetMap Nominatim directly
 export async function fetchRealPlacesClient(city, industry) {
-  const cleanCity = (city || 'Kochi').trim();
+  const cleanCity = (city || 'Thiruvananthapuram').trim();
   const cleanInd = (industry || 'Restaurants').trim();
   const query = `${cleanInd} in ${cleanCity}`;
 
