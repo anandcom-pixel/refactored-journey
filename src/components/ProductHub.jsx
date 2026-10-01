@@ -19,7 +19,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import ProductModal from './ProductModal';
-import { generateProductSlug, getFileFromImageUrl, downloadImageFile } from '../utils/productData';
+import { generateProductSlug, getFileFromImageUrl, downloadImageFile, copyTextToClipboard } from '../utils/productData';
 
 // Instagram Vector Icon
 function InstagramIcon({ className = "w-3.5 h-3.5" }) {
@@ -265,7 +265,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
 
     // 2. Graceful fallback: Copy text to clipboard and open WhatsApp
     try {
-      await navigator.clipboard.writeText(data.whatsAppText);
+      await copyTextToClipboard(data.whatsAppText);
       setNotificationMessage('Product details copied to clipboard! Opening WhatsApp...');
     } catch {
       setNotificationMessage('Opening WhatsApp with product details...');
@@ -313,7 +313,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
 
     // 2. Fallback: Automatically copy full formatted product description to clipboard and open Facebook sharer
     try {
-      await navigator.clipboard.writeText(data.facebookQuote);
+      await copyTextToClipboard(data.facebookQuote);
       setNotificationMessage('Product details copied to clipboard! Ready to paste into your Facebook post.');
     } catch {
       setNotificationMessage('Opening Facebook...');
@@ -323,23 +323,44 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Instagram Share handler: Copies complete product description to clipboard and downloads the product image
+  // Instagram Share handler: Copies complete product description to clipboard and makes product image available for posting
   const handleInstagramShare = async (product) => {
     const data = getProductShareData(product);
 
-    // 1. Copy complete formatted description text to clipboard
-    try {
-      await navigator.clipboard.writeText(data.instagramCaption);
-    } catch (err) {
-      console.warn('Failed to copy Instagram caption:', err);
-    }
+    // 1. Copy complete formatted description text to clipboard immediately with mobile-robust fallback
+    await copyTextToClipboard(data.instagramCaption);
 
-    // 2. Download / save product image to device so user can pick it in Instagram
+    // 2. Make product image available for Instagram:
+    // First, check if browser supports native file sharing (mobile Safari / Chrome Android)
+    // which triggers the native share sheet allowing user to directly tap "Instagram" or "Save to Photos"
     if (product.imageUrl) {
       try {
+        const imageFile = await getFileFromImageUrl(product.imageUrl, product.title);
+        const canShareFile = imageFile && typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [imageFile] });
+
+        if (canShareFile) {
+          try {
+            await navigator.share({
+              title: product.title,
+              text: data.instagramCaption,
+              files: [imageFile]
+            });
+            setCopiedAction(`${product.id}-instagram`);
+            setNotificationMessage('Details & Image copied! Paste them into your Instagram post.');
+            setTimeout(() => setCopiedAction(null), 3500);
+            return;
+          } catch (shareErr) {
+            // If user closed native share sheet without picking an app, trigger automatic download
+            if (shareErr.name !== 'AbortError') {
+              console.warn('Native share error, falling back to download:', shareErr);
+            }
+          }
+        }
+
+        // Automatic image file download fallback (desktop or mobile direct download)
         await downloadImageFile(product.imageUrl, product.title);
       } catch (err) {
-        console.warn('Image download failed:', err);
+        console.warn('Instagram image processing error:', err);
       }
     }
 
@@ -350,18 +371,18 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
   };
 
   // Copy full details (without URLs)
-  const handleCopyDetails = (product) => {
+  const handleCopyDetails = async (product) => {
     const data = getProductShareData(product);
-    navigator.clipboard.writeText(data.whatsAppText);
+    await copyTextToClipboard(data.whatsAppText);
     setCopiedAction(`${product.id}-copy`);
     setNotificationMessage(`Product details for "${product.title}" copied!`);
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
   // Copy direct product URL only
-  const handleCopyDirectLinkOnly = (product) => {
+  const handleCopyDirectLinkOnly = async (product) => {
     const data = getProductShareData(product);
-    navigator.clipboard.writeText(data.directProductUrl);
+    await copyTextToClipboard(data.directProductUrl);
     setCopiedAction(`${product.id}-link`);
     setNotificationMessage(`Direct link for "${product.title}" copied!`);
     setTimeout(() => setCopiedAction(null), 2500);
@@ -713,7 +734,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
                       <button
                         type="button"
                         onClick={() => handleInstagramShare(product)}
-                        title="Copy Details & Image for Instagram post"
+                        title="Copy for Insta: Caption & Image"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-900 border border-pink-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-instagram` ? (
@@ -724,7 +745,7 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
                         ) : (
                           <>
                             <InstagramIcon className="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                            <span className="truncate">Instagram</span>
+                            <span className="truncate">Copy for Insta</span>
                           </>
                         )}
                       </button>
@@ -969,11 +990,11 @@ ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
                 <button
                   type="button"
                   onClick={() => handleInstagramShare(selectedPhoto)}
-                  title="Copy Details & Image for Instagram"
+                  title="Copy for Insta: Caption & Image"
                   className="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-800 border border-pink-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                 >
                   <InstagramIcon className="w-3.5 h-3.5 text-pink-600" />
-                  <span>Instagram</span>
+                  <span>Copy for Insta</span>
                 </button>
                 <button
                   type="button"

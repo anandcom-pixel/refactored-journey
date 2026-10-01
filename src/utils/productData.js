@@ -117,6 +117,68 @@ export function compressImageFile(file, maxDim = 1200, quality = 0.82) {
 }
 
 /**
+ * Converts a base64 Data URL to a native binary Blob.
+ * Essential for mobile browsers (iOS Safari / Android Chrome) where
+ * data: URLs cannot be directly downloaded or shared.
+ */
+export function dataUrlToBlob(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return null;
+  try {
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  } catch (err) {
+    console.warn('Failed to convert data URL to Blob:', err);
+    return null;
+  }
+}
+
+/**
+ * Robust clipboard copy function supporting both modern navigator.clipboard
+ * and legacy/mobile webview fallback (document.execCommand).
+ */
+export async function copyTextToClipboard(text) {
+  if (typeof window === 'undefined' || !text) return false;
+
+  // 1. Modern Async Clipboard API
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('navigator.clipboard.writeText failed, using execCommand fallback:', err);
+    }
+  }
+
+  // 2. Legacy & Mobile Webview fallback
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '0';
+    textArea.style.opacity = '0';
+    textArea.setAttribute('readonly', '');
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    textArea.setSelectionRange(0, 99999); // Mobile Safari selection
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return success;
+  } catch (err) {
+    console.warn('execCommand copy fallback failed:', err);
+    return false;
+  }
+}
+
+/**
  * Converts an image source (data URL or web URL) to a File object
  * so it can be packaged into navigator.share({ files: [...] }).
  */
@@ -126,34 +188,50 @@ export async function getFileFromImageUrl(imageUrl, title = 'product') {
 
   // 1. Base64 Data URL (e.g. from local device upload)
   if (imageUrl.startsWith('data:image/')) {
-    try {
-      const arr = imageUrl.split(',');
-      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
-      return new File([u8arr], `${cleanName}.${ext}`, { type: mime });
-    } catch (e) {
-      console.warn('Failed to parse data URL into File:', e);
-      return null;
-    }
+    const blob = dataUrlToBlob(imageUrl);
+    if (!blob) return null;
+    const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+    return new File([blob], `${cleanName}.${ext}`, { type: blob.type || 'image/jpeg' });
   }
 
   // 2. Remote HTTP/HTTPS URL
   if (/^https?:\/\//i.test(imageUrl)) {
     try {
       const response = await fetch(imageUrl, { mode: 'cors' });
-      if (!response.ok) return null;
-      const blob = await response.blob();
-      const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
-      return new File([blob], `${cleanName}.${ext}`, { type: blob.type || 'image/jpeg' });
+      if (response.ok) {
+        const blob = await response.blob();
+        const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+        return new File([blob], `${cleanName}.${ext}`, { type: blob.type || 'image/jpeg' });
+      }
     } catch (e) {
-      console.warn('Failed to fetch remote image for sharing:', e);
-      return null;
+      console.warn('Direct fetch failed in getFileFromImageUrl, attempting canvas fallback:', e);
+    }
+
+    // Canvas fallback for remote images when direct fetch is blocked
+    try {
+      const blob = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9);
+          } catch {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = imageUrl;
+      });
+      if (blob) {
+        return new File([blob], `${cleanName}.jpg`, { type: 'image/jpeg' });
+      }
+    } catch (err) {
+      console.warn('Canvas fallback failed in getFileFromImageUrl:', err);
     }
   }
 
@@ -161,45 +239,94 @@ export async function getFileFromImageUrl(imageUrl, title = 'product') {
 }
 
 /**
- * Triggers a download of the product image file to the user's device,
- * allowing it to be immediately selected for Instagram posts/stories.
+ * Triggers an immediate, robust download of the product image file
+ * directly to the user's device gallery / downloads folder.
+ * Uses binary Blob URLs for full iOS Safari & Android Chrome compatibility.
  */
 export async function downloadImageFile(imageUrl, title = 'product') {
   if (!imageUrl || typeof window === 'undefined') return false;
   const cleanName = (title || 'product').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
 
   try {
-    // 1. Data URL
+    // 1. Base64 Data URL: convert to binary Blob and object URL for mobile download support
     if (imageUrl.startsWith('data:image/')) {
-      const a = document.createElement('a');
-      a.href = imageUrl;
-      const mime = imageUrl.match(/data:image\/(.*?);/)?.[1] || 'jpeg';
-      const ext = mime.replace('jpeg', 'jpg');
-      a.download = `${cleanName}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return true;
+      const blob = dataUrlToBlob(imageUrl);
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+        a.download = `${cleanName}.${ext}`;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        return true;
+      }
     }
 
-    // 2. Web URL
+    // 2. Web URL: fetch blob or use canvas fallback, then download
     if (/^https?:\/\//i.test(imageUrl)) {
-      const response = await fetch(imageUrl, { mode: 'cors' });
-      if (!response.ok) throw new Error('Fetch failed');
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
+      let blob = null;
+      try {
+        const response = await fetch(imageUrl, { mode: 'cors' });
+        if (response.ok) {
+          blob = await response.blob();
+        }
+      } catch (e) {
+        console.warn('Direct fetch failed in downloadImageFile, trying canvas fallback:', e);
+      }
+
+      if (!blob) {
+        // Canvas fallback
+        blob = await new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.9);
+            } catch {
+              resolve(null);
+            }
+          };
+          img.onerror = () => resolve(null);
+          img.src = imageUrl;
+        });
+      }
+
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+        a.download = `${cleanName}.${ext}`;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        return true;
+      }
+
+      // 3. Direct anchor fallback
       const a = document.createElement('a');
-      a.href = objectUrl;
-      const ext = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
-      a.download = `${cleanName}.${ext}`;
+      a.href = imageUrl;
+      a.download = `${cleanName}.jpg`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
       return true;
     }
   } catch (err) {
-    console.warn('Direct image download failed, attempting window fallback:', err);
+    console.warn('downloadImageFile failed, attempting window fallback:', err);
     try {
       const win = window.open(imageUrl, '_blank');
       if (win) return true;
@@ -209,5 +336,6 @@ export async function downloadImageFile(imageUrl, title = 'product') {
   }
   return false;
 }
+
 
 
