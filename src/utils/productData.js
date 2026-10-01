@@ -60,3 +60,58 @@ export const INITIAL_PRODUCTS = [
     createdAt: '2026-09-28T09:15:00.000Z'
   }
 ];
+
+export const PRESET_PRODUCT_IMAGES = [
+  { label: 'Desk & Office', url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=800&q=80', category: 'Furniture' },
+  { label: 'Laptop & Tech', url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80', category: 'Electronics' },
+  { label: 'Books & Study', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80', category: 'Education' },
+  { label: 'Clothing & Apparel', url: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=800&q=80', category: 'Fashion' },
+  { label: 'Bicycle & Sports', url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80', category: 'Fitness' },
+  { label: 'Home & Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80', category: 'Appliances' },
+];
+
+/**
+ * Compresses an image file from the device using an HTML5 Canvas,
+ * reducing multi-megabyte photos to an optimized JPEG (~100-250KB)
+ * to prevent browser localStorage quota overflow.
+ */
+export function compressImageFile(file, maxDim = 1200, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('Selected file is not an image'));
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({
+          dataUrl,
+          width,
+          height,
+          sizeKb: Math.round((dataUrl.length * 3) / 4 / 1024)
+        });
+      };
+      img.onerror = () => reject(new Error('Failed to load image file'));
+      img.src = event.target.result;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}

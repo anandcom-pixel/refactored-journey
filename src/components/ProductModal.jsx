@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { X, DollarSign, Gift, MapPin, Phone, Check } from 'lucide-react';
-import { generateProductSlug } from '../utils/productData';
-
-const PRESET_IMAGES = [
-  { label: 'Desk & Furniture', url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Laptop & Tech', url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Books & Notes', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Clothing & Apparel', url: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Bicycle & Sports', url: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80' },
-  { label: 'Home & Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80' },
-];
+import React, { useState, useRef } from 'react';
+import { 
+  X, 
+  DollarSign, 
+  Gift, 
+  MapPin, 
+  Phone, 
+  Check, 
+  Upload, 
+  Link as LinkIcon, 
+  Image as ImageIcon, 
+  Trash2, 
+  Sparkles, 
+  Loader2 
+} from 'lucide-react';
+import { generateProductSlug, PRESET_PRODUCT_IMAGES, compressImageFile } from '../utils/productData';
 
 export default function ProductModal({ isOpen, onClose, onSave, editingProduct }) {
   const [title, setTitle] = useState(() => editingProduct?.title || '');
@@ -19,7 +23,24 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
   const [city, setCity] = useState(() => editingProduct?.city || 'Thiruvananthapuram');
   const [phone, setPhone] = useState(() => editingProduct?.phone || '');
   const [description, setDescription] = useState(() => editingProduct?.description || '');
-  const [imageUrl, setImageUrl] = useState(() => editingProduct?.imageUrl || PRESET_IMAGES[0].url);
+
+  // Image state handling: supports Upload (from device), URL (web link), and Presets
+  const [imageUrl, setImageUrl] = useState(() => editingProduct?.imageUrl || PRESET_PRODUCT_IMAGES[0].url);
+  const [imageSourceType, setImageSourceType] = useState(() => {
+    if (!editingProduct?.imageUrl) return 'preset';
+    if (editingProduct.imageUrl.startsWith('data:image/')) return 'upload';
+    return 'url';
+  });
+  const [activeImageTab, setActiveImageTab] = useState(() => {
+    if (editingProduct?.imageUrl?.startsWith('data:image/')) return 'upload';
+    return 'upload'; // Default to upload for convenient file selection
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [imageSizeText, setImageSizeText] = useState(null);
+  const [imageError, setImageError] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
 
@@ -40,7 +61,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
       city: city.trim() || 'Local Area',
       phone: phone.trim(),
       description: description.trim(),
-      imageUrl: imageUrl.trim() || PRESET_IMAGES[0].url,
+      imageUrl: imageUrl.trim() || PRESET_PRODUCT_IMAGES[0].url,
       createdAt: editingProduct ? editingProduct.createdAt : new Date().toISOString(),
     };
 
@@ -48,20 +69,77 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
     onClose();
   };
 
-  const handleFileUpload = (e) => {
+  const handleProcessFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setImageError('Please select a valid image file (PNG, JPG, WEBP)');
+      return;
+    }
+
+    try {
+      setIsProcessingImage(true);
+      setImageError(null);
+      // Client-side compression prevents localStorage quota overflow while keeping sharp quality
+      const { dataUrl, sizeKb, width, height } = await compressImageFile(file, 1200, 0.85);
+      setImageUrl(dataUrl);
+      setImageSourceType('upload');
+      setImageSizeText(`${width}×${height} • ~${sizeKb} KB`);
+    } catch (err) {
+      console.error('Failed to compress image:', err);
+      setImageError('Could not process this image. Please try another file or enter an image URL.');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      handleProcessFile(file);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleProcessFile(file);
+    }
+  };
+
+  const handleSelectPreset = (presetUrl) => {
+    setImageUrl(presetUrl);
+    setImageSourceType('preset');
+    setImageSizeText(null);
+    setImageError(null);
+  };
+
+  const handleClearImage = () => {
+    setImageUrl('');
+    setImageSizeText(null);
+    setImageError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-2xl bg-white border border-amber-200 shadow-2xl p-6 my-8">
+      <div className="relative w-full max-w-xl rounded-2xl bg-white border border-amber-200 shadow-2xl p-6 my-8 max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-amber-100">
           <div className="flex items-center gap-2">
@@ -130,7 +208,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Ergonomic Office Chair, High School Math Books, Baby Cot..."
+              placeholder="e.g. Ergonomic Office Chair, High School Math Books, Mountain Bike..."
               className="w-full bg-slate-50 text-slate-900 text-sm px-3.5 py-2 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
             />
           </div>
@@ -209,7 +287,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. +91 98400 12345"
+                  placeholder="e.g. +91 98460 11223"
                   className="w-full bg-slate-50 text-slate-900 text-sm pl-9 pr-3.5 py-2 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
                 />
               </div>
@@ -222,7 +300,7 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
               Description & Pickup Details
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="State any features, dimensions, pickup time, or reason for donation/sale..."
@@ -230,47 +308,194 @@ export default function ProductModal({ isOpen, onClose, onSave, editingProduct }
             />
           </div>
 
-          {/* Image URL & Presets */}
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1">
-              Product Image (URL or Presets)
-            </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Paste Image URL (https://...)"
-                className="flex-1 bg-slate-50 text-slate-900 text-xs px-3 py-1.5 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500"
-              />
-              <label className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs cursor-pointer transition-colors border border-amber-300">
-                Upload File
-                <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          {/* Product Image Input (Upload File, Paste URL, or Pick Preset) */}
+          <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/90 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-amber-700" />
+                <span>Product Image *</span>
               </label>
-            </div>
 
-            {/* Quick preset chips */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] text-slate-500">Quick presets:</span>
-              {PRESET_IMAGES.map((preset, idx) => (
+              {/* Mode Selector Tabs */}
+              <div className="flex items-center bg-white rounded-lg p-0.5 border border-amber-200 text-[11px] font-bold">
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => setImageUrl(preset.url)}
-                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium border transition-colors cursor-pointer ${
-                    imageUrl === preset.url
-                      ? 'bg-amber-500 text-slate-950 border-amber-600 font-bold'
-                      : 'bg-white text-slate-600 hover:bg-amber-50 border-amber-200'
+                  onClick={() => setActiveImageTab('upload')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                    activeImageTab === 'upload'
+                      ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {preset.label}
+                  <Upload className="w-3 h-3" />
+                  <span>Upload File</span>
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setActiveImageTab('url')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                    activeImageTab === 'url'
+                      ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <LinkIcon className="w-3 h-3" />
+                  <span>Paste URL</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageTab('presets')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                    activeImageTab === 'presets'
+                      ? 'bg-amber-500 text-slate-950 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Presets</span>
+                </button>
+              </div>
             </div>
 
+            {/* TAB 1: File Upload Dropzone */}
+            {activeImageTab === 'upload' && (
+              <div className="space-y-2">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 ${
+                    isDragging
+                      ? 'border-amber-500 bg-amber-100/70 scale-[0.99]'
+                      : 'border-amber-300 hover:border-amber-400 bg-white/80 hover:bg-white'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  {isProcessingImage ? (
+                    <div className="flex items-center gap-2 text-amber-700 py-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-xs font-bold">Compressing & optimizing photo...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-2.5 rounded-full bg-amber-100 text-amber-800 shadow-2xs">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          Click to browse image or drag & drop here
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Supports PNG, JPG, JPEG, WEBP (auto-compressed for fast loading)
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: Direct Image URL */}
+            {activeImageTab === 'url' && (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <LinkIcon className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="url"
+                    value={imageUrl}
+                    onChange={(e) => {
+                      setImageUrl(e.target.value);
+                      setImageSourceType('url');
+                      setImageSizeText(null);
+                    }}
+                    placeholder="https://images.unsplash.com/photo-... or any public image URL"
+                    className="w-full bg-white text-slate-900 text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:border-amber-500 font-mono shadow-2xs"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Tip: Direct web links unfurl into beautiful thumbnail preview cards in WhatsApp chats.
+                </p>
+              </div>
+            )}
+
+            {/* TAB 3: Sample Presets */}
+            {activeImageTab === 'presets' && (
+              <div className="space-y-2">
+                <p className="text-[11px] text-slate-600 font-medium">
+                  Select a high-resolution sample image matching your item:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {PRESET_PRODUCT_IMAGES.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectPreset(preset.url)}
+                      className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                        imageUrl === preset.url
+                          ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold ring-1 ring-amber-400'
+                          : 'bg-white hover:bg-amber-50/80 border-amber-200 text-slate-700'
+                      }`}
+                    >
+                      <img src={preset.url} alt={preset.label} className="w-8 h-8 rounded-md object-cover shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-semibold truncate leading-tight">{preset.label}</div>
+                        <div className="text-[9px] text-slate-400 truncate">{preset.category}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Error notice if any */}
+            {imageError && (
+              <p className="text-xs text-rose-600 font-medium bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg">
+                ⚠️ {imageError}
+              </p>
+            )}
+
+            {/* Live Image Preview Card */}
             {imageUrl && (
-              <div className="mt-2 relative w-full h-24 rounded-xl overflow-hidden border border-amber-200 bg-slate-100">
-                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+              <div className="mt-2 bg-white rounded-xl border border-amber-200/90 p-2.5 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-slate-100 border border-amber-200 shrink-0">
+                    <img
+                      src={imageUrl}
+                      alt="Product preview"
+                      className="w-full h-full object-cover"
+                      onError={() => setImageError('Invalid image URL or unable to load image preview')}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-slate-900">Preview Active</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
+                        {imageSourceType === 'upload' ? '📁 Device Upload' : imageSourceType === 'preset' ? '🎨 Preset Photo' : '🌐 Web URL'}
+                      </span>
+                    </div>
+                    {imageSizeText ? (
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">{imageSizeText}</p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 font-mono truncate max-w-[200px] mt-0.5">{imageUrl}</p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleClearImage}
+                  title="Remove image"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>

@@ -15,7 +15,8 @@ import {
   MessageCircle,
   Globe,
   X,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Maximize2
 } from 'lucide-react';
 import ProductModal from './ProductModal';
 import { generateProductSlug } from '../utils/productData';
@@ -92,6 +93,9 @@ export default function ProductHub({ products, onUpdateProducts }) {
 
   // Target direct product from URL (?product=id or #product-id)
   const [highlightedProductId, setHighlightedProductId] = useState(null);
+
+  // Full photo preview lightbox modal
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   // Notifications & Copy feedback
   const [copiedAction, setCopiedAction] = useState(null);
@@ -175,13 +179,25 @@ export default function ProductHub({ products, onUpdateProducts }) {
     // Direct product link constructed with both query param (?product=id) and hash anchor (#product-id)
     const directProductUrl = `${productionDomain}/?product=${encodeURIComponent(product.id)}#product-${encodeURIComponent(product.id)}`;
 
+    // Clean preview thumbnail or image reference for WhatsApp unfurling
+    let imageReferenceText = '';
+    if (product.imageUrl) {
+      if (/^https?:\/\//i.test(product.imageUrl)) {
+        // Public web URLs automatically generate visual thumbnail preview cards in WhatsApp
+        imageReferenceText = `🖼️ Photo Thumbnail / Preview:\n${product.imageUrl}\n\n`;
+      } else {
+        // Device upload base64 images - point buyer to direct listing photo
+        imageReferenceText = `🖼️ Photo: HD photo attached (view full photo in direct link below)\n\n`;
+      }
+    }
+
     // WhatsApp formatted text with bold styling
     const whatsAppText = 
 `🛍️ *${product.title}*
 ${priceDisplay}
 📍 Location: ${product.city} • Condition: ${product.condition}
 
-📝 Description:
+${imageReferenceText}📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
 ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
@@ -199,7 +215,7 @@ Shared via Aura Resale & Donation Hub`;
 📍 Location: ${product.city}
 🏷️ Condition: ${product.condition}
 
-📝 Description:
+${product.imageUrl && /^https?:\/\//i.test(product.imageUrl) ? `🖼️ Photo Preview: ${product.imageUrl}\n\n` : ''}📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
 ${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
@@ -483,18 +499,26 @@ ${directProductUrl}
                   </div>
                 )}
 
-                {/* Image & Badges */}
-                <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                {/* Prominent Image & Badges with Full Lightbox Click */}
+                <div 
+                  onClick={() => setSelectedPhoto(product)}
+                  className="relative h-52 sm:h-56 w-full bg-slate-100 overflow-hidden cursor-pointer group/img"
+                  title="Click to view full photo"
+                >
                   <img
                     src={product.imageUrl}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
                     onError={(e) => {
                       e.target.src = 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80';
                     }}
                   />
+
+                  {/* Gradient overlay for high badge contrast */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+
                   {/* Category Pill */}
-                  <div className="absolute top-2.5 left-2.5">
+                  <div className="absolute top-2.5 left-2.5 z-10">
                     {isDonation ? (
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-white font-black text-[11px] shadow-sm flex items-center gap-1">
                         <Gift className="w-3 h-3" />
@@ -508,9 +532,17 @@ ${directProductUrl}
                   </div>
 
                   {/* Condition badge */}
-                  <div className="absolute top-2.5 right-2.5">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-900/75 backdrop-blur-xs text-white text-[10px] font-semibold">
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-semibold shadow-xs">
                       {product.condition}
+                    </span>
+                  </div>
+
+                  {/* Enlarge Callout on hover */}
+                  <div className="absolute bottom-2.5 right-2.5 z-10 opacity-0 group-hover/img:opacity-100 transition-opacity duration-200">
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-950/85 hover:bg-slate-950 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1.5 shadow-md border border-white/20">
+                      <Maximize2 className="w-3 h-3 text-amber-400" />
+                      <span>View Photo</span>
                     </span>
                   </div>
                 </div>
@@ -777,6 +809,78 @@ ${directProductUrl}
         onSave={handleSaveProduct}
         editingProduct={editingProduct}
       />
+
+      {/* Full-resolution Product Photo Lightbox */}
+      {selectedPhoto && (
+        <div 
+          onClick={() => setSelectedPhoto(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-3xl w-full bg-white rounded-2xl border border-amber-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-amber-100 bg-amber-50/50">
+              <div className="min-w-0 pr-4">
+                <h3 className="font-bold text-slate-900 text-base truncate">{selectedPhoto.title}</h3>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                  <span className="font-bold text-amber-800">
+                    {selectedPhoto.category === 'donation' ? 'Free Donation' : `₹${parseFloat(selectedPhoto.price || 0).toLocaleString()}`}
+                  </span>
+                  <span>•</span>
+                  <span>{selectedPhoto.city}</span>
+                  <span>•</span>
+                  <span className="font-semibold text-slate-700">{selectedPhoto.condition}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPhoto(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-amber-100 transition-colors cursor-pointer shrink-0"
+                title="Close photo"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Photo View */}
+            <div className="max-h-[65vh] bg-slate-950 flex items-center justify-center overflow-hidden">
+              <img
+                src={selectedPhoto.imageUrl}
+                alt={selectedPhoto.title}
+                className="max-h-[65vh] w-auto max-w-full object-contain"
+              />
+            </div>
+
+            {/* Footer with quick action buttons */}
+            <div className="p-3.5 bg-white border-t border-amber-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-slate-500 truncate max-w-md">
+                {selectedPhoto.description || 'Listing photo'}
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleWhatsAppShare(selectedPhoto);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Share on WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPhoto(null)}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
