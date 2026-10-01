@@ -173,52 +173,53 @@ export default function ProductHub({ products, onUpdateProducts }) {
   // Formatter for rich social shares pointing DIRECTLY to the specific individual product
   const getProductShareData = (product) => {
     const isDonation = product.category === 'donation';
-    const priceDisplay = isDonation ? '🎁 FREE DONATION' : `💰 Price: ₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
-    const rawPrice = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
+    const priceText = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
+    const priceDisplay = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
     
-    // Direct product link constructed with both query param (?product=id) and hash anchor (#product-id)
-    const directProductUrl = `${productionDomain}/?product=${encodeURIComponent(product.id)}#product-${encodeURIComponent(product.id)}`;
+    // Clean direct product URL without duplicating query param (?product=) and hash anchor (#product-)
+    const directProductUrl = `${productionDomain}/?product=${encodeURIComponent(product.id)}`;
 
     // Clean preview thumbnail or image reference for WhatsApp unfurling
     let imageReferenceText = '';
     if (product.imageUrl) {
       if (/^https?:\/\//i.test(product.imageUrl)) {
         // Public web URLs automatically generate visual thumbnail preview cards in WhatsApp
-        imageReferenceText = `🖼️ Photo Thumbnail / Preview:\n${product.imageUrl}\n\n`;
+        imageReferenceText = `Photo Preview:\n${product.imageUrl}\n\n`;
       } else {
         // Device upload base64 images - point buyer to direct listing photo
-        imageReferenceText = `🖼️ Photo: HD photo attached (view full photo in direct link below)\n\n`;
+        imageReferenceText = `Photo: HD photo attached (view in listing link)\n\n`;
       }
     }
 
-    // WhatsApp formatted text with bold styling
+    // WhatsApp formatted text with standard emojis (🏷️, 💰, 📍, 📝, 📞)
     const whatsAppText = 
-`🛍️ *${product.title}*
-${priceDisplay}
-📍 Location: ${product.city} • Condition: ${product.condition}
+`🏷️ *${product.title}*
+💰 Price: ${priceText}
+📍 Location: ${product.city}
+🏷️ Condition: ${product.condition}
 
 ${imageReferenceText}📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
+${product.phone ? `📞 Contact: ${product.phone}\n` : ''}Direct Product Link:
 ${directProductUrl}
 
 Shared via Aura Resale & Donation Hub`;
 
     // Facebook quote & direct link
-    const facebookQuote = `🛍️ ${product.title} (${priceDisplay}) - ${product.description || ''} | Direct Link: ${directProductUrl}`;
+    const facebookQuote = `🏷️ ${product.title} (Price: ${priceText}) - ${product.description || ''} | Link: ${directProductUrl}`;
 
-    // Instagram formatted caption (with hashtags & structured spacing)
+    // Instagram formatted caption (with standard emojis)
     const instagramCaption = 
-`🛍️ ${product.title}
-💰 Price: ${rawPrice}
+`🏷️ ${product.title}
+💰 Price: ${priceText}
 📍 Location: ${product.city}
 🏷️ Condition: ${product.condition}
 
-${product.imageUrl && /^https?:\/\//i.test(product.imageUrl) ? `🖼️ Photo Preview: ${product.imageUrl}\n\n` : ''}📝 Description:
+${product.imageUrl && /^https?:\/\//i.test(product.imageUrl) ? `Photo Preview: ${product.imageUrl}\n\n` : ''}📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}🔗 Direct Product Link:
+${product.phone ? `📞 Contact: ${product.phone}\n` : ''}Direct Product Link:
 ${directProductUrl}
 
 #resale #preloved #donation #${product.category} #${(product.city || 'local').toLowerCase().replace(/[^a-z0-9]/g, '')} #aurahub`;
@@ -226,6 +227,7 @@ ${directProductUrl}
     return {
       title: product.title,
       priceDisplay,
+      priceText,
       directProductUrl,
       whatsAppText,
       facebookQuote,
