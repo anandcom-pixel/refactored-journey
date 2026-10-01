@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Search, 
@@ -20,7 +20,7 @@ import {
   MessageCircle,
   X
 } from 'lucide-react';
-import { searchLeads, exportLeadsToCsv, INITIAL_REAL_LEADS } from '../utils/scraperService';
+import { searchLeads, exportLeadsToCsv } from '../utils/scraperService';
 
 const COMMON_CATEGORIES = [
   { value: 'Restaurants', label: '🍽️ Restaurants & Dining' },
@@ -48,8 +48,8 @@ export default function LeadScraper() {
   const [selectedCategory, setSelectedCategory] = useState('Restaurants');
   const [customCategory, setCustomCategory] = useState('');
   const [isCustomMode, setIsCustomMode] = useState(false);
-  const [leads, setLeads] = useState(() => INITIAL_REAL_LEADS);
-  const [isLoading, setIsLoading] = useState(false);
+  const [leads, setLeads] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filterType, setFilterType] = useState('all'); // 'all', 'opportunities', 'healthy', 'no-website'
   const [copiedId, setCopiedId] = useState(null);
   const [lastSearched, setLastSearched] = useState({ city: 'Thiruvananthapuram', industry: 'Restaurants' });
@@ -73,11 +73,36 @@ export default function LeadScraper() {
       setLeads(results);
       setLastSearched({ city: searchCity, industry: searchInd });
     } catch (err) {
-      console.error(err);
+      console.error('Lead search error:', err);
+      setLeads([]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Automatically fetch authentic live data for Thiruvananthapuram on mount (zero static mock data)
+  useEffect(() => {
+    let ignore = false;
+    searchLeads('Thiruvananthapuram', 'Restaurants')
+      .then((results) => {
+        if (!ignore) {
+          setLeads(results);
+          setLastSearched({ city: 'Thiruvananthapuram', industry: 'Restaurants' });
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Initial lead search error:', err);
+          setLeads([]);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handlePresetClick = (p) => {
     setCity(p.city);
@@ -443,8 +468,16 @@ export default function LeadScraper() {
                 <tr>
                   <td colSpan="6" className="py-12 text-center text-slate-500">
                     <Building2 className="w-8 h-8 text-amber-300 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-700">No leads match this filter.</p>
-                    <p className="text-[11px] text-slate-400 mt-1">Try switching to 'All Leads' or search a different city.</p>
+                    <p className="font-semibold text-slate-700">
+                      {leads.length === 0 
+                        ? `No authentic listings found for "${lastSearched.industry}" in "${lastSearched.city}".`
+                        : 'No leads match the selected filter.'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {leads.length === 0 
+                        ? 'Try a broader category (e.g. Restaurants, Footwear, Gym, Hotel, Retail) or check city spelling.'
+                        : 'Try switching to "All Leads" above.'}
+                    </p>
                   </td>
                 </tr>
               ) : (
