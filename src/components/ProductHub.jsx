@@ -170,59 +170,48 @@ export default function ProductHub({ products, onUpdateProducts }) {
     setIsDomainModalOpen(false);
   };
 
-  // Formatter for rich social shares pointing DIRECTLY to the specific individual product
+  // Formatter for rich social shares containing ONLY product details and photo reference (Zero website URLs or direct links)
   const getProductShareData = (product) => {
     const isDonation = product.category === 'donation';
     const priceText = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
     const priceDisplay = isDonation ? 'FREE DONATION' : `₹${parseFloat(product.price || 0).toLocaleString('en-IN')}`;
     
-    // Clean direct product URL without duplicating query param (?product=) and hash anchor (#product-)
+    // Direct product link (kept only for internal ID referencing, NEVER in shared messages)
     const directProductUrl = `${productionDomain}/?product=${encodeURIComponent(product.id)}`;
 
-    // Clean preview thumbnail or image reference for WhatsApp unfurling
-    let imageReferenceText = '';
-    if (product.imageUrl) {
-      if (/^https?:\/\//i.test(product.imageUrl)) {
-        // Public web URLs automatically generate visual thumbnail preview cards in WhatsApp
-        imageReferenceText = `Photo Preview:\n${product.imageUrl}\n\n`;
-      } else {
-        // Device upload base64 images - point buyer to direct listing photo
-        imageReferenceText = `Photo: HD photo attached (view in listing link)\n\n`;
-      }
-    }
-
-    // WhatsApp formatted text with standard emojis (🏷️, 💰, 📍, 📝, 📞)
+    // WhatsApp formatted text containing ONLY product details (No website links or URLs)
     const whatsAppText = 
 `🏷️ *${product.title}*
 💰 Price: ${priceText}
-📍 Location: ${product.city}
-🏷️ Condition: ${product.condition}
+📍 Location: ${product.city} • Condition: ${product.condition}
 
-${imageReferenceText}📝 Description:
+📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}Direct Product Link:
-${directProductUrl}
+${product.phone ? `📞 Contact: ${product.phone}` : ''}`.trim();
 
-Shared via Aura Resale & Donation Hub`;
+    // Facebook quote containing ONLY product details (No website links or URLs)
+    const facebookQuote = 
+`🏷️ ${product.title}
+💰 Price: ${priceText}
+📍 Location: ${product.city} • Condition: ${product.condition}
 
-    // Facebook quote & direct link
-    const facebookQuote = `🏷️ ${product.title} (Price: ${priceText}) - ${product.description || ''} | Link: ${directProductUrl}`;
+📝 Description:
+${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-    // Instagram formatted caption (with standard emojis)
+${product.phone ? `📞 Contact: ${product.phone}` : ''}`.trim();
+
+    // Instagram formatted caption containing ONLY product details (No website links or URLs)
     const instagramCaption = 
 `🏷️ ${product.title}
 💰 Price: ${priceText}
-📍 Location: ${product.city}
-🏷️ Condition: ${product.condition}
+📍 Location: ${product.city} • Condition: ${product.condition}
 
-${product.imageUrl && /^https?:\/\//i.test(product.imageUrl) ? `Photo Preview: ${product.imageUrl}\n\n` : ''}📝 Description:
+📝 Description:
 ${product.description || 'Quality pre-owned item ready for resale or donation.'}
 
-${product.phone ? `📞 Contact: ${product.phone}\n` : ''}Direct Product Link:
-${directProductUrl}
-
-#resale #preloved #donation #${product.category} #${(product.city || 'local').toLowerCase().replace(/[^a-z0-9]/g, '')} #aurahub`;
+${product.phone ? `📞 Contact: ${product.phone}\n` : ''}
+#resale #preloved #donation #${product.category} #${(product.city || 'local').toLowerCase().replace(/[^a-z0-9]/g, '')} #aurahub`.trim();
 
     return {
       title: product.title,
@@ -235,21 +224,23 @@ ${directProductUrl}
     };
   };
 
-  // WhatsApp Share handler
+  // WhatsApp Share handler (shares ONLY product details, no URLs)
   const handleWhatsAppShare = (product) => {
     const data = getProductShareData(product);
     const url = `https://wa.me/?text=${encodeURIComponent(data.whatsAppText)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Facebook Share handler (uses direct product URL for the Facebook preview scraper)
+  // Facebook Share handler (copies clean details to clipboard and opens Facebook)
   const handleFacebookShare = (product) => {
     const data = getProductShareData(product);
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(data.directProductUrl)}&quote=${encodeURIComponent(data.facebookQuote)}`;
+    navigator.clipboard.writeText(data.whatsAppText);
+    setNotificationMessage('Product details copied! Ready to paste into your Facebook post.');
+    const url = `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(data.facebookQuote)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Instagram Share handler (copies formatted caption with direct product link and alerts user)
+  // Instagram Share handler (copies formatted caption without URLs and alerts user)
   const handleInstagramShare = (product) => {
     const data = getProductShareData(product);
     navigator.clipboard.writeText(data.instagramCaption);
@@ -261,12 +252,12 @@ ${directProductUrl}
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
-  // Copy full details & direct link
+  // Copy full details (without URLs)
   const handleCopyDetails = (product) => {
     const data = getProductShareData(product);
     navigator.clipboard.writeText(data.whatsAppText);
     setCopiedAction(`${product.id}-copy`);
-    setNotificationMessage(`Product details & direct link for "${product.title}" copied!`);
+    setNotificationMessage(`Product details for "${product.title}" copied!`);
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
@@ -469,7 +460,6 @@ ${directProductUrl}
           filteredProducts.map(product => {
             const isDonation = product.category === 'donation';
             const isTarget = highlightedProductId === product.id || highlightedProductId === product.slug;
-            const shareData = getProductShareData(product);
 
             return (
               <div
@@ -587,15 +577,15 @@ ${directProductUrl}
                     </div>
                   )}
 
-                  {/* Social Share Buttons with Specific Product Deep Link */}
+                  {/* Social Share Buttons (Clean product details, zero URLs) */}
                   <div className="mt-3 pt-2.5 border-t border-amber-100 space-y-2">
                     <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         <Share2 className="w-3 h-3 text-amber-600" />
-                        <span>Share Specific Item:</span>
+                        <span>Share Product Details:</span>
                       </div>
-                      <span className="text-[10px] text-amber-800/90 font-medium font-mono truncate max-w-[130px]" title={shareData.directProductUrl}>
-                        ?product={product.id}
+                      <span className="text-[10px] text-amber-800/90 font-medium font-mono truncate max-w-[130px]" title={`Listing #${product.id}`}>
+                        #{product.id}
                       </span>
                     </div>
 
@@ -604,7 +594,7 @@ ${directProductUrl}
                       <button
                         type="button"
                         onClick={() => handleWhatsAppShare(product)}
-                        title="Share on WhatsApp with direct product link, price, and description"
+                        title="Share product details on WhatsApp (no website links)"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/20 shrink-0" />
@@ -615,7 +605,7 @@ ${directProductUrl}
                       <button
                         type="button"
                         onClick={() => handleFacebookShare(product)}
-                        title="Share on Facebook with direct preview URL to this item"
+                        title="Share product details on Facebook"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         <FacebookIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
@@ -626,7 +616,7 @@ ${directProductUrl}
                       <button
                         type="button"
                         onClick={() => handleInstagramShare(product)}
-                        title="Copy Instagram caption formatted specifically for this item"
+                        title="Copy Instagram post caption"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-pink-50 to-rose-50 hover:from-pink-100 hover:to-rose-100 text-pink-900 border border-pink-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-instagram` ? (
@@ -642,11 +632,11 @@ ${directProductUrl}
                         )}
                       </button>
 
-                      {/* Copy Link / Details */}
+                      {/* Copy Details */}
                       <button
                         type="button"
                         onClick={() => handleCopyDetails(product)}
-                        title="Copy direct product link & full details to clipboard"
+                        title="Copy product details to clipboard"
                         className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
                       >
                         {copiedAction === `${product.id}-copy` ? (
