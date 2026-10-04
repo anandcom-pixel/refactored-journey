@@ -147,7 +147,7 @@ export default function AiDiscoveryHub() {
       setResultsFilterQuery('');
 
       if (res.isLiveGemini) {
-        setToastMessage(`✨ Live Gemini 2.0 Flash generated ${res.apps.length} tailored recommendations!`);
+        setToastMessage(`✨ Live Gemini 3.8 Flash generated ${res.apps.length} tailored recommendations!`);
       } else if (res.apiError) {
         setApiErrorBanner(`Gemini API: ${res.apiError}. Displaying curated recommendations.`);
         setToastMessage('Live query notice. Curated recommendations loaded.');
@@ -292,7 +292,7 @@ export default function AiDiscoveryHub() {
                 {apiKey ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Gemini 2.0 Flash Connected
+                    Gemini 3.8 Flash Connected
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
@@ -596,7 +596,7 @@ export default function AiDiscoveryHub() {
             Evaluating and curating AI websites...
           </h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            {apiKey ? 'Querying Google Gemini 2.0 Flash for real-world AI applications matching your use case...' : 'Scoring curated expert catalog with customized requirement analysis...'}
+            {apiKey ? 'Querying Google Gemini 3.8 Flash for real-world AI applications matching your use case...' : 'Scoring curated expert catalog with customized requirement analysis...'}
           </p>
         </div>
       ) : filteredApps.length === 0 ? (
@@ -884,7 +884,7 @@ export default function AiDiscoveryHub() {
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
                   1. Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-amber-800 underline font-semibold">Google AI Studio</a>.<br />
-                  2. Click <strong>Create API Key</strong> (Gemini 2.0 Flash is 100% free with generous limits).<br />
+                  2. Click <strong>Create API Key</strong> (Gemini 3.8 Flash is 100% free with generous limits).<br />
                   3. Paste the key above, test connection, and click <strong>Save Key</strong>.
                 </p>
               </div>

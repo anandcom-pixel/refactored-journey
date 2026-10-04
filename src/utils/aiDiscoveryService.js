@@ -375,7 +375,7 @@ export async function searchAiApps({ category, specificNeed, apiKey }) {
       const geminiResults = await callGeminiApi(effectiveKey.trim(), cleanCategory, cleanNeed);
       if (Array.isArray(geminiResults) && geminiResults.length > 0) {
         return {
-          source: 'Gemini 2.0 Live Analysis',
+          source: 'Gemini 3.8 Live Analysis',
           isLiveGemini: true,
           isMissingApiKey: false,
           apps: geminiResults
@@ -413,7 +413,7 @@ export async function testGeminiApiKey(apiKey) {
     return { success: false, error: 'Please enter an API key.' };
   }
   const cleanKey = apiKey.trim();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cleanKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${cleanKey}`;
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -451,7 +451,7 @@ export async function testGeminiApiKey(apiKey) {
 }
 
 /**
- * Calls Google Generative Language API (Gemini 2.0 / 1.5 Flash) with strict JSON output schema.
+ * Calls Google Generative Language API (Gemini 3.8 / 1.5 Flash) with strict JSON output schema.
  * Requests a comprehensive list of at least 8 to 12 diverse AI applications.
  */
 async function callGeminiApi(apiKey, category, specificNeed) {
@@ -485,7 +485,7 @@ For EACH of the 8 to 12 tools, provide:
 
 Respond strictly with a valid JSON array containing at least 8 to 12 tool objects. Do not include markdown code block syntax if possible, just the raw JSON.`;
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
@@ -510,7 +510,7 @@ Respond strictly with a valid JSON array containing at least 8 to 12 tool object
   });
 
   if (!res.ok) {
-    // If gemini-2.0-flash is unavailable, try gemini-1.5-flash
+    // If gemini-3.8-flash is unavailable, try gemini-1.5-flash
     if (res.status === 404 || res.status === 400) {
       const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const fallbackRes = await fetch(fallbackEndpoint, {
