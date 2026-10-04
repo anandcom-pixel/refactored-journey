@@ -452,18 +452,25 @@ export async function testGeminiApiKey(apiKey) {
 
 /**
  * Calls Google Generative Language API (Gemini 2.0 / 1.5 Flash) with strict JSON output schema.
+ * Requests a comprehensive list of at least 8 to 12 diverse AI applications.
  */
 async function callGeminiApi(apiKey, category, specificNeed) {
   const systemInstruction = `You are a world-class AI Software Architect and Tech Industry Evaluator. 
-Your task is to recommend real-world, currently active, production-grade AI applications and tools matching the user's category and specific requirements.
+Your task is to recommend a comprehensive, diverse collection of real-world, currently active, production-grade AI applications and tools matching the user's category and specific requirements.
 Always provide authentic direct URLs (e.g. https://www.cursor.com).
 Return valid JSON adhering strictly to the requested schema.`;
 
   const userPrompt = `Category: ${category}
 User's Specific Requirement / Use Case: ${specificNeed || 'Top essential tools in this category'}
 
-Please recommend 4 to 8 top authentic AI websites/tools that specifically solve this need.
-For each tool, provide:
+Please generate a comprehensive, in-depth directory of at least 8 to 12 diverse, top authentic AI websites and tools that specifically solve this need.
+Include a balanced mix of:
+- Industry-standard category leaders
+- Innovative fast-growing / trending tools
+- Free or Open-Source alternatives
+- Specialized niche solutions that excel for this exact use case
+
+For EACH of the 8 to 12 tools, provide:
 1. name: Official tool name
 2. url: Direct authentic HTTPS website link (e.g. "https://...")
 3. category: Main category (e.g. "Coding", "Image Generation", "Video Creation", "Productivity", "Research", "Audio", "Automation")
@@ -476,7 +483,7 @@ For each tool, provide:
 10. badge: Tag like "Top Pick", "Industry Standard", "Open Source", "Trending", or "Best Value"
 11. bestFor: Short phrase identifying the target user (e.g. "Founders & developers")
 
-Respond strictly with a valid JSON array of objects. Do not include markdown code block syntax if possible, just the raw JSON.`;
+Respond strictly with a valid JSON array containing at least 8 to 12 tool objects. Do not include markdown code block syntax if possible, just the raw JSON.`;
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -490,7 +497,8 @@ Respond strictly with a valid JSON array of objects. Do not include markdown cod
       }
     ],
     generationConfig: {
-      temperature: 0.2,
+      temperature: 0.3,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json'
     }
   };
@@ -530,18 +538,57 @@ function parseGeminiResponse(data) {
 
   // Strip potential markdown ```json wrapping
   const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-  const parsed = JSON.parse(cleaned);
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    console.error('Failed to parse Gemini JSON response:', e, cleaned);
+    return [];
+  }
 
-  if (!Array.isArray(parsed)) return [];
+  // Support both direct array and wrapped objects (e.g. { apps: [...] } or { tools: [...] })
+  let items = [];
+  if (Array.isArray(parsed)) {
+    items = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.apps)) items = parsed.apps;
+    else if (Array.isArray(parsed.tools)) items = parsed.tools;
+    else if (Array.isArray(parsed.results)) items = parsed.results;
+    else if (Array.isArray(parsed.recommendations)) items = parsed.recommendations;
+    else {
+      const firstArr = Object.values(parsed).find(v => Array.isArray(v));
+      if (firstArr) items = firstArr;
+    }
+  }
 
-  return parsed.map((item, idx) => ({
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  // Deduplicate items by name or url to keep the list clean
+  const seen = new Set();
+  const dedupedItems = [];
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const nameKey = (item.name || '').trim().toLowerCase();
+    const urlKey = (item.url || '').trim().toLowerCase();
+    const uniqueKey = nameKey || urlKey;
+
+    if (uniqueKey && seen.has(uniqueKey)) continue;
+    if (uniqueKey) seen.add(uniqueKey);
+
+    dedupedItems.push(item);
+  }
+
+  return dedupedItems.map((item, idx) => ({
     id: `gemini-${Date.now()}-${idx}`,
     name: item.name || 'AI Tool',
     url: item.url?.startsWith('http') ? item.url : `https://${item.url || 'google.com'}`,
     category: item.category || 'AI Software',
     tagline: item.tagline || item.overview?.slice(0, 60) || 'AI Application',
     overview: item.overview || 'Powerful AI application for modern workflows.',
-    keyFeatures: Array.isArray(item.keyFeatures) ? item.keyFeatures : ['AI Automation', 'Cloud processing', 'Modern web interface'],
+    keyFeatures: Array.isArray(item.keyFeatures) && item.keyFeatures.length > 0
+      ? item.keyFeatures
+      : ['AI Automation', 'Cloud processing', 'Modern web interface'],
     pricingTier: item.pricingTier || 'Freemium',
     pricingDetails: item.pricingDetails || 'Freemium / Free tier available',
     whyItFits: item.whyItFits || 'Highly tailored to your specified workflow needs.',
@@ -594,7 +641,7 @@ function scoreAndFilterCuratedApps(category, specificNeed) {
 
   scored.sort((a, b) => b.score - a.score);
 
-  const finalApps = scored.slice(0, 8).map(({ app }) => {
+  const finalApps = scored.slice(0, 12).map(({ app }) => {
     // Tailor the 'whyItFits' note if user provided a specific prompt
     let customizedWhy = app.whyItFits;
     if (specificNeed && specificNeed.trim().length > 5) {
