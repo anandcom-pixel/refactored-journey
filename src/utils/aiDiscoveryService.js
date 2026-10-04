@@ -360,7 +360,8 @@ export const PROMPT_IDEAS = [
 
 /**
  * Searches and analyzes AI apps using Google Gemini API.
- * Falls back to intelligent semantic filtering on the curated catalog if no key is set or call fails.
+ * Returns tailored recommendations using responseMimeType: 'application/json'.
+ * Flags isMissingApiKey when no key is set so the UI can display clear guidance.
  */
 export async function searchAiApps({ category, specificNeed, apiKey }) {
   const cleanCategory = (category || 'All').trim();
@@ -376,11 +377,20 @@ export async function searchAiApps({ category, specificNeed, apiKey }) {
         return {
           source: 'Gemini 2.0 Live Analysis',
           isLiveGemini: true,
+          isMissingApiKey: false,
           apps: geminiResults
         };
       }
     } catch (err) {
       console.warn('Gemini API call failed, falling back to curated knowledge engine:', err);
+      const filteredApps = scoreAndFilterCuratedApps(cleanCategory, cleanNeed);
+      return {
+        source: 'Curated Catalog (Gemini Fallback)',
+        isLiveGemini: false,
+        isMissingApiKey: false,
+        apiError: err.message || 'Gemini API call failed',
+        apps: filteredApps
+      };
     }
   }
 
@@ -388,10 +398,56 @@ export async function searchAiApps({ category, specificNeed, apiKey }) {
   const filteredApps = scoreAndFilterCuratedApps(cleanCategory, cleanNeed);
 
   return {
-    source: effectiveKey ? 'Curated Catalog (Gemini Fallback)' : 'Curated Expert Catalog',
+    source: 'Curated Expert Catalog',
     isLiveGemini: false,
+    isMissingApiKey: true,
     apps: filteredApps
   };
+}
+
+/**
+ * Tests whether a user-provided Gemini API key is valid and has active quota.
+ */
+export async function testGeminiApiKey(apiKey) {
+  if (!apiKey || !apiKey.trim()) {
+    return { success: false, error: 'Please enter an API key.' };
+  }
+  const cleanKey = apiKey.trim();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cleanKey}`;
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'Respond with OK' }] }]
+      })
+    });
+    if (res.ok) {
+      return { success: true };
+    }
+    // Try gemini-1.5-flash fallback
+    const fallbackRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'Respond with OK' }] }]
+      })
+    });
+    if (fallbackRes.ok) {
+      return { success: true };
+    }
+    const errText = await res.text();
+    let message = errText;
+    try {
+      const errObj = JSON.parse(errText);
+      message = errObj.error?.message || errText;
+    } catch {
+      // ignore
+    }
+    return { success: false, error: message };
+  } catch (err) {
+    return { success: false, error: err.message || 'Network connection failed' };
+  }
 }
 
 /**
