@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   CheckSquare, 
   ShoppingBag, 
-  Target 
+  Target,
+  Sparkles 
 } from 'lucide-react';
 import Header from './components/Header';
 import DigitalClock from './components/DigitalClock';
@@ -14,6 +15,7 @@ import StatsBar from './components/StatsBar';
 import ProductHub from './components/ProductHub';
 import { INITIAL_PRODUCTS } from './utils/productData';
 import LeadScraper from './components/LeadScraper';
+import AiDiscoveryHub from './components/AiDiscoveryHub';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 
 const THEMES = [
@@ -306,6 +308,26 @@ export default function App() {
                   Auditor
                 </span>
               </button>
+
+              {/* Tab 4: AI App Discovery & Research Hub */}
+              <button
+                type="button"
+                data-active={activeTab === 'ai-discovery'}
+                onClick={() => setActiveTab('ai-discovery')}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                  activeTab === 'ai-discovery'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-amber-50/80'
+                }`}
+              >
+                <Sparkles className={`w-4 h-4 shrink-0 ${activeTab === 'ai-discovery' ? 'text-slate-950' : 'text-amber-600'}`} />
+                <span>AI Discovery Hub</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
+                  activeTab === 'ai-discovery' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-800 border border-amber-300'
+                }`}>
+                  Gemini AI
+                </span>
+              </button>
             </div>
           </div>
 
@@ -313,6 +335,7 @@ export default function App() {
             {activeTab === 'productivity' && 'Daily habits, focus timer, and task manager'}
             {activeTab === 'resale-hub' && 'Give away or resell items with 1-click social sharing'}
             {activeTab === 'lead-scraper' && 'Scrape and audit commercial leads with CSV export'}
+            {activeTab === 'ai-discovery' && 'Discover, evaluate, and research top AI apps with Gemini AI'}
           </div>
         </nav>
 
@@ -388,12 +411,19 @@ export default function App() {
           </div>
         )}
 
+        {/* View 4: AI App Discovery & Research Hub */}
+        {activeTab === 'ai-discovery' && (
+          <div className="animate-in fade-in duration-300">
+            <AiDiscoveryHub />
+          </div>
+        )}
+
         {/* Footer */}
         <footer className="pt-6 pb-2 border-t border-amber-200/70 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
           <div className="flex items-center gap-2">
             <span className="font-bold text-amber-900">Aura Suite</span>
             <span>•</span>
-            <span className="text-slate-600">Productivity, Resale Hub & Lead Generator</span>
+            <span className="text-slate-600">Productivity, Resale Hub, Lead Generator & AI Discovery</span>
           </div>
 
           <div className="flex items-center gap-4">
